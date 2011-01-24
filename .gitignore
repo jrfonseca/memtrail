@@ -1,0 +1,4 @@
+*.o
+*.out
+*.so
+sample
