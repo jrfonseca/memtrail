@@ -122,6 +122,12 @@ void free(void *ptr)
 }
 
 
+/**
+ * calloc is called by dlsym, potentially causing infinite recursion, per
+ * http://blog.bigpixel.ro/2010/09/interposing-calloc-on-linux/ . By
+ * implementing calloc in terms of malloc we avoid that, and have a simpler
+ * implementation.
+ */
 void *calloc(size_t nmemb, size_t size)
 {
    void *ptr;

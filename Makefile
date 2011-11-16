@@ -1,10 +1,10 @@
 all: libleakcount.so sample
 
 libleakcount.so: leakcount.cpp
-	gcc -shared -fPIC -ldl -o $@ $<
+	gcc -shared -fPIC -o $@ $< -ldl
 
 sample: sample.cpp
-	g++ -o $@ $<
+	g++ -o $@ $< -ldl
 
 test: libleakcount.so sample
 	LD_PRELOAD=./libleakcount.so ./sample

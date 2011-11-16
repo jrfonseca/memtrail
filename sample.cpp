@@ -1,10 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <dlfcn.h>
 
 int
 main(int argc, char *argv[])
 {
    void *p;
+
+   dlsym(RTLD_NEXT, "foo");
 
    p = malloc(1024);
    free(p);
