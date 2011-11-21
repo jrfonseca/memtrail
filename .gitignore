@@ -1,4 +1,6 @@
+.*.sw?
 *.o
 *.out
 *.so
+*.pyc
 sample
