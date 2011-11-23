@@ -95,14 +95,24 @@ class Symbol:
     def function(self):
         if self._function is None:
             self._function = '??'
-            if self.module:
+            if self.module and os.path.exists(self.module):
+                mime_type = subprocess.check_output(['file', '--dereference', '--brief', '--mime-type', self.module]).strip()
+                if mime_type == 'application/x-executable':
+                    # use absolute addresses for executables
+                    addr = self.addr
+                elif mime_type == 'application/x-sharedlib':
+                    # use relative offset for shared objects
+                    addr = self.offset
+                else:
+                    sys.stderr.write('memtrail: warning: unexpected mime-type %s for %s\n' % (mime_type, self.module))
+                    addr = self.offset
                 try:
                     cmd = [
                             'addr2line',
                             '-e', self.module,
                             '-f',
                             '-C',
-                            '+0x%x' % self.offset
+                            '+0x%x' % addr
                     ]
                     stdout = subprocess.check_output(cmd)
                 except subprocess.CalledProcessError:
