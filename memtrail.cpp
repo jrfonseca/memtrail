@@ -289,7 +289,7 @@ int posix_memalign(void **memptr, size_t alignment, size_t size)
    if (!malloc_ptr) {
       malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
       if (!malloc_ptr) {
-	 return -ENOMEM;
+         return -ENOMEM;
       }
    }
 
@@ -322,7 +322,7 @@ _malloc(size_t size)
 
    if (!malloc_ptr) {
       if (reentrant) {
-	 return NULL;
+         return NULL;
       }
       ++reentrant;
       malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
@@ -403,7 +403,7 @@ void *realloc(void *ptr, size_t size)
    void *new_ptr;
 
    if (!size) {
-      free(ptr);
+      _free(ptr);
       return NULL;
    }
 
@@ -425,7 +425,7 @@ void *realloc(void *ptr, size_t size)
    if (new_ptr) {
       size_t min_size = hdr->size >= size ? size : hdr->size;
       memcpy(new_ptr, ptr, min_size);
-      free(ptr);
+      _free(ptr);
    }
 
    return new_ptr;
