@@ -264,6 +264,8 @@ _update(const void *ptr, ssize_t size) {
 #ifndef BINARY
       write(fd, "\n", 1);
 #endif
+   } else {
+       //fprintf(stderr, "memtrail: warning: recursion\n");
    }
    --recursion;
 
