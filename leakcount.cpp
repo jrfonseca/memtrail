@@ -30,8 +30,8 @@ int posix_memalign(void **memptr, size_t alignment, size_t size)
 
    *memptr = NULL;
 
-   if (alignment & (alignment - 1) != 0 ||
-       alignment & (sizeof(void*) - 1) != 0) {
+   if ((alignment & (alignment - 1)) != 0 ||
+       (alignment & (sizeof(void*) - 1)) != 0) {
       return EINVAL;
    }
 
