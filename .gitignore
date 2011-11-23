@@ -5,4 +5,5 @@
 *.out
 *.pyc
 *.so
+gprof2dot.py
 sample
