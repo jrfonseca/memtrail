@@ -1,4 +1,4 @@
-CFLAGS = -Wall
+CFLAGS = -Wall -fno-omit-frame-pointer
 
 all: libmemtrail.so sample
 
