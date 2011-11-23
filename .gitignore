@@ -1,6 +1,8 @@
 .*.sw?
+*.data
+*.dot
 *.o
 *.out
-*.so
 *.pyc
+*.so
 sample

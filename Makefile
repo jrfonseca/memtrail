@@ -10,7 +10,7 @@ sample: sample.cpp
 
 test: libmemtrail.so sample
 	./memtrail ./sample
-	python process.py memtrail.log.gz
+	python process.py memtrail.data
 
 test-gdb:
 	# http://stackoverflow.com/questions/4703763/how-to-run-gdb-with-ld-preload
