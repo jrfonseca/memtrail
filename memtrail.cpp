@@ -224,8 +224,8 @@ _update(const void *ptr, ssize_t size) {
    if (recursion++ <= 0) {
       if (fd < 0) {
          mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-         //fd = open("leakcount.log", O_WRONLY | O_CREAT | O_TRUNC, mode);
-         fd = _gzopen("leakcount.log.gz", O_WRONLY | O_CREAT | O_TRUNC, mode);
+         //fd = open("memtrail.log", O_WRONLY | O_CREAT | O_TRUNC, mode);
+         fd = _gzopen("memtrail.log.gz", O_WRONLY | O_CREAT | O_TRUNC, mode);
 
          if (fd < 0) {
             abort();
@@ -456,7 +456,7 @@ class LeakCount
 {
 public:
    ~LeakCount() {
-      fprintf(stderr, "leakcount: %lu bytes leaked\n", total_size);
+      fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
    }
 };
 

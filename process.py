@@ -222,7 +222,7 @@ class Heap:
 
         from gprof2dot import DotWriter, TEMPERATURE_COLORMAP
 
-        writer = DotWriter(open('leakcount.dot', 'wt'))
+        writer = DotWriter(open('memtrail.dot', 'wt'))
         writer.strip = True
         writer.wrap = True
         profile.prune(0.5/100.0, 0.1/100.0)
@@ -320,7 +320,7 @@ class Parser:
             pass
         self.on_finish()
 
-    # ./libleakcount.so(+0xead)[0x2b54cc593ead]
+    # ./libmemtrail.so(+0xead)[0x2b54cc593ead]
     frame_re = re.compile(r'^(?P<module>[^()]*)(?:\((?P<symbol>.*)\+(?P<offset>0x[0-9a-fA-F]+)\))?\[(?P<address>0x[0-9a-fA-F]+)\]$')
 
     def parse_event(self):
@@ -372,7 +372,7 @@ class Parser:
 
             #print Symbol(addr, module, offset)
             if layer < USER:
-                if module.endswith('libleakcount.so'):
+                if module.endswith('libmemtrail.so'):
                     if layer == START:
                         layer = LEAKCOUNT
                 else:

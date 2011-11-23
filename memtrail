@@ -30,9 +30,9 @@ abspath() {
 }
 
 
-LEAKCOUNT=`dirname "$0"`
-LEAKCOUNT=`abspath "$LEAKCOUNT"`
+MEMTRAIL=`dirname "$0"`
+MEMTRAIL=`abspath "$MEMTRAIL"`
 
-export LD_PRELOAD=$LEAKCOUNT/libleakcount.so
+export LD_PRELOAD=$MEMTRAIL/libmemtrail.so
 
 exec "$@"
