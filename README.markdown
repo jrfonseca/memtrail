@@ -33,14 +33,14 @@ Usage
 
 Run the application you want to debug as
 
-    /path/to/memtrail /path/to/application [args...]
+    memtrail /path/to/application [args...]
 
 and it will generate a record  `memtrail.data` in the current
 directory.
 
 View results with
 
-    /path/to/process.py memtrail.data
+    memtrail report
 
 
 Links
