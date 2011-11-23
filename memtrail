@@ -212,11 +212,12 @@ class Heap:
                 parent = child
         root.dump()
 
-    def graph(self):
+    def graph(self, filename):
         try:
             import gprof2dot
         except ImportError:
-            pass
+            sys.stderr.write('warning: could not import gprof2dot -- graph not generated\n')
+            return
 
         from gprof2dot import Profile, Function, Call, SAMPLES, SAMPLES2, TIME_RATIO, TOTAL_TIME_RATIO
 
@@ -263,11 +264,13 @@ class Heap:
 
         from gprof2dot import DotWriter, TEMPERATURE_COLORMAP
 
-        writer = DotWriter(open('memtrail.dot', 'wt'))
+        writer = DotWriter(open(filename, 'wt'))
         writer.strip = True
         writer.wrap = True
         profile.prune(0.5/100.0, 0.1/100.0)
         writer.graph(profile, TEMPERATURE_COLORMAP)
+        
+        sys.stdout.write('%s written\n' % filename)
 
 
 class Filter:
@@ -399,7 +402,7 @@ class Parser:
         count, = self.read('B')
 
         frames = []
-        START, LEAKCOUNT, USER = range(3)
+        START, MEMTRAIL, USER = range(3)
         layer = START
         for i in range(count):
             addr, offset, moduleNo = self.read('PPB')
@@ -415,9 +418,9 @@ class Parser:
             if layer < USER:
                 if module.endswith('libmemtrail.so'):
                     if layer == START:
-                        layer = LEAKCOUNT
+                        layer = MEMTRAIL
                 else:
-                    if layer == LEAKCOUNT:
+                    if layer == MEMTRAIL:
                         layer = USER
             #print '0x%08x %r +0x%08x' % (addr, module, offset)
             if layer == USER:
@@ -467,9 +470,19 @@ class Parser:
     def on_finish(self):
         if self.counter:
             sys.stdout.write('\n')
-        sys.stdout.write('max = %u\n' % self.max_heap.size)
-        self.max_heap.tree()
-        self.max_heap.graph()
+        
+        self.dump_heap('maximum', self.max_heap)
+        self.dump_heap('leaked', self.heap)
+
+    def dump_heap(self, label, heap):
+        sys.stdout.write('----\n')
+        sys.stdout.write('\n')
+        sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
+        sys.stdout.write('\n')
+        heap.tree()
+        sys.stdout.write('\n')
+        heap.graph('memprof.%s.dot' % label)
+        sys.stdout.write('\n')
 
     def read(self, fmt):
         size = struct.calcsize(fmt)
