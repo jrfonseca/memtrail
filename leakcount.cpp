@@ -6,15 +6,12 @@
 #include <errno.h>
 #include <dlfcn.h>
 
-typedef void *(*calloc_ptr_t)(size_t nmemb, size_t size);
 typedef void *(*malloc_ptr_t)(size_t size);
 typedef void (*free_ptr_t)(void *ptr);
-typedef void *(*realloc_ptr_t)(void *ptr, size_t size);
 
 static malloc_ptr_t malloc_ptr = NULL;
-static calloc_ptr_t calloc_ptr = NULL;
 static free_ptr_t free_ptr = NULL;
-static realloc_ptr_t realloc_ptr = NULL;
+
 
 struct header_t {
    size_t size;
