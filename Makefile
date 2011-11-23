@@ -9,7 +9,8 @@ sample: sample.cpp
 	g++ -O0 -g2 -o $@ $< -ldl
 
 test: libmemtrail.so sample
-	LD_PRELOAD=./libmemtrail.so ./sample
+	./memtrail ./sample
+	python process.py memtrail.log.gz
 
 test-gdb:
 	# http://stackoverflow.com/questions/4703763/how-to-run-gdb-with-ld-preload

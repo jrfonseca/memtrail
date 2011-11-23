@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env python
 ##########################################################################
 #
 # Copyright 2011 Jose Fonseca
@@ -25,14 +25,31 @@
 ##########################################################################/
 
 
-abspath() {
-	cd "$1" && pwd
-}
+import optparse
+import os.path
+import subprocess
+import sys
 
 
-MEMTRAIL=`dirname "$0"`
-MEMTRAIL=`abspath "$MEMTRAIL"`
+def main():
+    parser = optparse.OptionParser(
+        usage="\n\t%prog [options] -- program [args] ...")
+    (options, args) = parser.parse_args(sys.argv[1:])
 
-export LD_PRELOAD=$MEMTRAIL/libmemtrail.so
+    if not args:
+        parser.error('insufficient number of arguments')
 
-exec "$@"
+    ld_preload = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'libmemtrail.so'))
+    if not os.path.exists(ld_preload):
+        sys.error.write('memtrail: error: %s not found\n' % ld_preload)
+        sys.exit(1)
+
+    env = os.environ.copy()
+    env['LD_PRELOAD'] = ld_preload
+
+    retcode = subprocess.call(args, env=env)
+    sys.exit(retcode)
+
+
+if __name__ == '__main__':
+    main()
