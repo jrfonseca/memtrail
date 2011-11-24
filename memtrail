@@ -212,14 +212,15 @@ class Allocation:
         return 'alloc #%u, address 0x%X, size = %%u' % (self.no, self.address, self.size)
 
 
+default_threshold = 0.01
+
+
 class TreeNode:
 
     def __init__(self, label=''):
         self.label = label
         self.cost = 0
         self.children = {}
-
-    default_threshold = 0.01
 
     def write(self, stream, threshold = default_threshold):
         assert not self.label
@@ -293,7 +294,7 @@ class Heap:
                 parent = child
         return root
 
-    def graph(self, filename):
+    def graph(self, filename, threshold = default_threshold):
         try:
             import gprof2dot
         except ImportError:
@@ -315,7 +316,7 @@ class Heap:
                     function = profile.functions[function_id]
                 except KeyError:
                     function = Function(function_id, function_name)
-                    function.module = os.path.basename(symbol.module)
+                    function.module = os.path.basename(str(symbol.module))
                     function[SAMPLES] = 0
                     profile.add_function(function)
                 callchain.append(function)
@@ -348,7 +349,7 @@ class Heap:
         writer = DotWriter(open(filename, 'wt'))
         writer.strip = True
         writer.wrap = True
-        profile.prune(0.5/100.0, 0.1/100.0)
+        profile.prune(threshold, threshold)
         writer.graph(profile, TEMPERATURE_COLORMAP)
         
         sys.stdout.write('%s written\n' % filename)
@@ -579,7 +580,7 @@ class Reporter(Parser):
             tree = heap.tree()
             tree.write(sys.stdout, threshold = threshold)
             sys.stdout.write('\n')
-            heap.graph('memprof.%s.dot' % label)
+            heap.graph('memprof.%s.dot' % label, threshold = threshold)
             sys.stdout.write('\n')
 
 
@@ -618,7 +619,7 @@ def report(args):
         help="exclude modules matching the regular expression")
     optparser.add_option(
         '-t', '--threshold', metavar='PERCENTAGE',
-        type="float", dest="threshold", default=TreeNode.default_threshold*100.0,
+        type="float", dest="threshold", default = default_threshold*100.0,
         help="eliminate nodes below this threshold [default: %default]")
     (options, args) = optparser.parse_args(args)
 
