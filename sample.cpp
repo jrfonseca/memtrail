@@ -140,3 +140,6 @@ main(int argc, char *argv[])
 
    return 0;
 }
+
+
+// vim:set sw=3 ts=3 et:

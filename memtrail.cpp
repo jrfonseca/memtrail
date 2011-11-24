@@ -66,16 +66,16 @@ static int fd = -1;
 
 
 struct Module {
-    const char *dli_fname;
-    void       *dli_fbase;
+   const char *dli_fname;
+   void       *dli_fbase;
 };
 
 static Module modules[128];
 unsigned numModules = 0;
 
 struct Symbol {
-    void *addr;
-    Module *module;
+   void *addr;
+   Module *module;
 };
 
 #define MAX_SYMBOLS 131071
@@ -467,3 +467,6 @@ public:
 
 
 static Main _main;
+
+
+// vim:set sw=3 ts=3 et:
