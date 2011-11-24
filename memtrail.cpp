@@ -176,7 +176,7 @@ _gzopen(const char *name, int oflag, mode_t mode)
    switch (pid) {
    case -1:
       fprintf(stderr, "leaktrace: error: could not fork\n");
-      abort(-1);
+      abort();
 
    case 0:
       // child
