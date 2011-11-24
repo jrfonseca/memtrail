@@ -191,12 +191,17 @@ void operator delete[] (void *ptr) {
 }
 
 
-class LeakCount
+class Main
 {
 public:
-   ~LeakCount() {
+   Main() {
+      // Only trace the current process.
+      unsetenv("LD_PRELOAD");
+   }
+
+   ~Main() {
       fprintf(stderr, "leakcount: %lu bytes leaked\n", total_size);
    }
 };
 
-static LeakCount lq;
+static Main _main;
