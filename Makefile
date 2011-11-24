@@ -11,6 +11,7 @@ sample: sample.cpp
 
 test: libmemtrail.so sample
 	./memtrail record ./sample
+	./memtrail dump
 	./memtrail report
 
 test-debug: libmemtrail.so sample

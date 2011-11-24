@@ -388,13 +388,9 @@ class Filter:
 
 class Parser:
 
-    def __init__(self, log, filter):
+    def __init__(self, log):
         self.log = GzipFile(log, 'rt')
         self.stamp = 0
-        self.heap = Heap()
-        self.max_heap = self.heap
-        self.max_stamp = 0
-        self.filter = filter
 
         self.modules = {}
         self.symbols = {}
@@ -408,8 +404,7 @@ class Parser:
         except struct.error:
             pass
         except KeyboardInterrupt:
-            self.heap = Heap()
-        self.on_finish()
+            pass
 
     # ./libmemtrail.so(+0xead)[0x2b54cc593ead]
     frame_re = re.compile(r'^(?P<module>[^()]*)(?:\((?P<symbol>.*)\+(?P<offset>0x[0-9a-fA-F]+)\))?\[(?P<address>0x[0-9a-fA-F]+)\]$')
@@ -423,25 +418,7 @@ class Parser:
 
         frames = self.parse_frames()
 
-        if ssize > 0:
-            alloc = self.create_alloc(addr, ssize, frames)
-            if self.filter.filter(alloc):
-                self.heap.add(alloc)
-            else:
-                return True
-        else:
-            if self.heap is self.max_heap:
-                self.max_heap = self.heap.copy()
-            try:
-                old_alloc = self.pop_alloc(addr)
-            except KeyError:
-                return True
-
-        if self.heap.size > self.max_heap.size:
-            self.max_heap = self.heap
-            self.max_stamp = stamp
-
-        self.on_update(stamp)
+        self.handle_event(stamp, addr, ssize, frames)
 
         return True
 
@@ -481,6 +458,49 @@ class Parser:
 
         assert frames
         return frames
+    
+    def handle_event(self, stamp, addr, ssize, frames):
+        pass
+
+    def read(self, fmt):
+        size = struct.calcsize(fmt)
+        data = self.log.read(size)
+        return struct.unpack(fmt, data)
+
+    def readline(self):
+        line = self.log.readline()
+        return self.stamp, line
+
+
+class Reporter(Parser):
+
+    def __init__(self, log, filter):
+        Parser.__init__(self, log)
+        self.heap = Heap()
+        self.max_heap = self.heap
+        self.max_stamp = 0
+        self.filter = filter
+
+    def handle_event(self, stamp, addr, ssize, frames):
+        if ssize > 0:
+            alloc = self.create_alloc(addr, ssize, frames)
+            if self.filter.filter(alloc):
+                self.heap.add(alloc)
+            else:
+                return True
+        else:
+            if self.heap is self.max_heap:
+                self.max_heap = self.heap.copy()
+            try:
+                old_alloc = self.pop_alloc(addr)
+            except KeyError:
+                return True
+
+        if self.heap.size > self.max_heap.size:
+            self.max_heap = self.heap
+            self.max_stamp = stamp
+
+        self.on_update(stamp)
 
     def create_alloc(self, address, size, frames, parent = None):
         stamp = None
@@ -493,10 +513,10 @@ class Parser:
     def pop_alloc(self, address):
         return self.heap.pop(address)
 
-    last_stamp = 0
-
     counter = 1
     interval = 1000
+
+    last_stamp = 0
 
     def on_update(self, stamp):
         if self.counter:
@@ -517,18 +537,6 @@ class Parser:
     def on_finish(self):
         if self.counter:
             sys.stdout.write('\n')
-
-    def read(self, fmt):
-        size = struct.calcsize(fmt)
-        data = self.log.read(size)
-        return struct.unpack(fmt, data)
-
-    def readline(self):
-        line = self.log.readline()
-        return self.stamp, line
-
-
-class Reporter(Parser):
 
     def report_heap(self, label, heap, threshold):
         sys.stdout.write('----\n')
@@ -604,6 +612,35 @@ def report(args):
 
 
 ##########################################################################
+# dump
+
+
+class Dumper(Parser):
+
+    def handle_event(self, stamp, addr, ssize, frames):
+        sys.stdout.write('%u: 0x%08x %+i\n' % (stamp, addr, ssize))
+        for frame in frames:
+            sys.stdout.write('\t%s\n' % frame)
+        sys.stdout.write('\n')
+
+
+def dump(args):
+    '''Read memtrail.data (created by memtrail record) and dump the allocations'''
+
+    optparser = OptionParser(
+        usage="\n\t%prog dump [options]")
+    (options, args) = optparser.parse_args(args)
+
+    if args:
+        optparser.error('wrong number of arguments')
+
+    input = 'memtrail.data'
+
+    dumper = Dumper(input)
+    dumper.parse()
+
+
+##########################################################################
 # help
 
 
@@ -642,6 +679,7 @@ def help(args):
 commands = {
     'record': record,
     'report': report,
+    'dump': dump,
     'help': help,
 }
 
