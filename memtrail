@@ -36,13 +36,35 @@ import time
 
 
 
+class GzipFile(gzip.GzipFile):
+
+    def _read_eof(self):
+        # Ignore incomplete files
+        try:
+            gzip.GzipFile._read_eof(self)
+        except IOError:
+            pass
+
+
+class OptionParser(optparse.OptionParser):
+
+    def parse_args(self, args):
+        # Skip option parsing when there are no options.  This prevents optparse
+        # from complaining about "-foo" when parsing "bla ble -foo"
+        if args and args[0].startswith('-'):
+            return optparse.OptionParser.parse_args(self, args)
+        else:
+            options, _ = optparse.OptionParser.parse_args(self, [])
+            return options, args
+
+
 ##########################################################################
 # record
 
 def record(args):
     '''Run a command and record its allocations into memtrail.data'''
 
-    optparser = optparse.OptionParser(
+    optparser = OptionParser(
         usage="\n\t%prog record [options] -- program [args] ...")
     (options, args) = optparser.parse_args(args)
 
@@ -64,16 +86,6 @@ def record(args):
 
 ##########################################################################
 # report
-
-
-class GzipFile(gzip.GzipFile):
-
-    def _read_eof(self):
-        # Ignore incomplete files
-        try:
-            gzip.GzipFile._read_eof(self)
-        except IOError:
-            pass
 
 
 class Context:
@@ -497,7 +509,7 @@ class Parser:
 def report(args):
     '''Read memtrail.data (created by memtrail record) and report the allocations'''
 
-    optparser = optparse.OptionParser(
+    optparser = OptionParser(
         usage="\n\t%prog report [options]")
     optparser.add_option(
         '-g', '--graph', metavar='DOT',
@@ -565,7 +577,7 @@ def synopsis():
 def help(args):
     '''Display help information about memtrail'''
 
-    optparser = optparse.OptionParser(
+    optparser = OptionParser(
         usage="\n\t%prog help [options] -- command [args] ...")
     (options, args) = optparser.parse_args(args)
 
@@ -603,7 +615,8 @@ def main():
     for name, desc in synopsis():
         usage.append('    %-10s%s' % (name, desc))
 
-    optparser = optparse.OptionParser(usage = '\n' + '\n'.join(usage))
+    optparser = OptionParser(usage = '\n' + '\n'.join(usage))
+
     (options, args) = optparser.parse_args(sys.argv[1:])
 
     if not args:
