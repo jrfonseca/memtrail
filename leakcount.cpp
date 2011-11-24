@@ -44,13 +44,15 @@ int posix_memalign(void **memptr, size_t alignment, size_t size)
       return -ENOMEM;
    }
 
-   hdr = (struct header_t *)(((size_t)ptr + sizeof *hdr + alignment - 1) & ~(alignment - 1));
+   hdr = (struct header_t *)((((size_t)ptr + sizeof *hdr + alignment - 1) & ~(alignment - 1)) - sizeof *hdr);
 
    total_size += size;
    hdr->size = size;
    hdr->ptr = ptr;
 
    *memptr = &hdr[1];
+
+   assert(((size_t)*memptr & (alignment - 1)) == 0);
 
    return 0;
 }
