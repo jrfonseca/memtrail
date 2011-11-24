@@ -176,7 +176,7 @@ _gzopen(const char *name, int oflag, mode_t mode)
    switch (pid) {
    case -1:
       fprintf(stderr, "leaktrace: error: could not fork\n");
-      exit(-1);
+      abort(-1);
 
    case 0:
       // child
@@ -452,12 +452,18 @@ void operator delete[] (void *ptr) {
 }
 
 
-class LeakCount
+class Main
 {
 public:
-   ~LeakCount() {
+   Main() {
+      // Only trace the current process.
+      unsetenv("LD_PRELOAD");
+   }
+
+   ~Main() {
       fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
    }
 };
 
-static LeakCount lq;
+
+static Main _main;

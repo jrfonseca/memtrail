@@ -24,6 +24,7 @@
  **************************************************************************/
 
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -115,6 +116,16 @@ test_cxx(void)
 }
 
 
+static void
+test_subprocess(void)
+{
+   const char *ld_preload = getenv("LD_PRELOAD");
+   assert(ld_preload == NULL);
+
+   system("env | grep LD_PRELOAD");
+}
+
+
 int
 main(int argc, char *argv[])
 {
@@ -123,6 +134,7 @@ main(int argc, char *argv[])
    test_calloc();
    test_posix_memalign();
    test_cxx();
+   test_subprocess();
 
    printf("Should leak %lu bytes...\n", leaked);
 
