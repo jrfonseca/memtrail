@@ -164,26 +164,45 @@ class Allocation:
 
 class TreeNode:
 
-    def __init__(self, label='', parent = None):
+    def __init__(self, label=''):
         self.label = label
-        self.parent = None
         self.cost = 0
         self.children = {}
 
-    def dump(self, indent = '', prune_ratio = 0.05):
+    default_threshold = 0.01
+
+    def write(self, stream, threshold = default_threshold):
+        assert not self.label
+        self._write(stream, '', threshold, self.cost)
+
+    def _write(self, stream, indent, threshold, total_cost):
         children = self.children.values()
         children.sort(lambda x, y: cmp(x.cost, y.cost), reverse = True)
-        if len(children) == 1:
-            child = children[0]
-            sys.stdout.write('%s       %s\n' % (indent, child.label))
-            child.dump(indent + ' ')
-        else:
-            for child in children:
-                relative_cost = float(child.cost) / float(self.cost)
-                if relative_cost < prune_ratio:
-                    break
-                sys.stdout.write('%s%5.2f%% %s\n' % (indent, 100.0 * relative_cost, child.label))
-                child.dump(indent + '  ')
+        
+        it = iter(children)
+        for child in it:
+            if child.cost < threshold * total_cost:
+                nr_pruned = 1
+                pruned_cost = child.cost
+                for child in it:
+                    absolute_cost = child.cost
+                    nr_pruned += 1
+                relative_cost = float(pruned_cost) / float(total_cost)
+                stream.write('%s->%5.2f%% (%uB) in %u places, all below the %5.2f%% threshold\n' % (indent, 100.0 * relative_cost, pruned_cost, nr_pruned, threshold))
+                break
+
+            relative_cost = float(child.cost) / float(total_cost)
+            stream.write('%s->%5.2f%% (%uB): %s\n' % (indent, 100.0 * relative_cost, child.cost, child.label))
+            if child is children[-1]:
+               child_indent = indent + '  '
+            else:
+               child_indent = indent + '| '
+
+            child._write(stream, child_indent, threshold, total_cost)
+
+            if child is not children[-1]:
+                stream.write('%s\n' % (child_indent,))
+
 
 class Heap:
 
@@ -218,11 +237,11 @@ class Heap:
                 try:
                     child = parent.children[frame]
                 except KeyError:
-                    child = TreeNode(frame, parent)
+                    child = TreeNode(frame)
                     parent.children[frame] = child
                 child.cost += alloc.size
                 parent = child
-        root.dump()
+        return root
 
     def graph(self, filename):
         try:
@@ -482,19 +501,6 @@ class Parser:
     def on_finish(self):
         if self.counter:
             sys.stdout.write('\n')
-        
-        self.dump_heap('maximum', self.max_heap)
-        self.dump_heap('leaked', self.heap)
-
-    def dump_heap(self, label, heap):
-        sys.stdout.write('----\n')
-        sys.stdout.write('\n')
-        sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
-        sys.stdout.write('\n')
-        heap.tree()
-        sys.stdout.write('\n')
-        heap.graph('memprof.%s.dot' % label)
-        sys.stdout.write('\n')
 
     def read(self, fmt):
         size = struct.calcsize(fmt)
@@ -504,6 +510,21 @@ class Parser:
     def readline(self):
         line = self.log.readline()
         return self.stamp, line
+
+
+class Reporter(Parser):
+
+    def report_heap(self, label, heap, threshold):
+        sys.stdout.write('----\n')
+        sys.stdout.write('\n')
+        sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
+        sys.stdout.write('\n')
+        if heap.size:
+            tree = heap.tree()
+            tree.write(sys.stdout, threshold = threshold)
+            sys.stdout.write('\n')
+            heap.graph('memprof.%s.dot' % label)
+            sys.stdout.write('\n')
 
 
 def report(args):
@@ -539,11 +560,10 @@ def report(args):
         action='append',
         dest="exclude_modules", default=[],
         help="exclude modules matching the regular expression")
-    # add a new option to control skew of the colorization curve
     optparser.add_option(
-        '--skew',
-        type="float", dest="theme_skew", default=1.0,
-        help="skew the colorization curve.  Values < 1.0 give more variety to lower percentages.  Value > 1.0 give less variety to lower percentages")
+        '-t', '--threshold', metavar='PERCENTAGE',
+        type="float", dest="threshold", default=TreeNode.default_threshold*100.0,
+        help="eliminate nodes below this threshold [default: %default]")
     (options, args) = optparser.parse_args(args)
 
     if args:
@@ -558,9 +578,13 @@ def report(args):
 
     input = 'memtrail.data'
 
-    parser = Parser(input, filter)
-    parser.parse()
+    threshold = options.threshold / 100.0
 
+    reporter = Reporter(input, filter)
+    reporter.parse()
+
+    reporter.report_heap('maximum', reporter.max_heap, threshold)
+    reporter.report_heap('leaked', reporter.heap, threshold)
 
 
 ##########################################################################
