@@ -1,12 +1,13 @@
-CFLAGS = -Wall -fno-omit-frame-pointer
+CXX = g++
+CXXFLAGS = -Wall -fno-omit-frame-pointer
 
 all: libleakcount.so sample
 
 libleakcount.so: leakcount.cpp
-	gcc -O2 -g2 $(CFLAGS) -shared -fPIC -o $@ $< -ldl
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -o $@ $< -ldl
 
 sample: sample.cpp
-	g++ -O0 -g2 -o $@ $< -ldl
+	$(CXX) -O0 -g2 -o $@ $< -ldl
 
 test: libleakcount.so sample
 	LD_PRELOAD=./libleakcount.so ./sample
