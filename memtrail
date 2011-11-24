@@ -396,8 +396,6 @@ class Parser:
         self.symbols = {}
 
     def parse(self):
-        wordsize, = self.read('B')
-        assert wordsize * 8 == 64
         try:
             while True:
                 self.parse_event()

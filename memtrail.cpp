@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/limits.h> // PIPE_BUF
 
 #include <execinfo.h>
 
@@ -83,8 +84,46 @@ static Symbol symbols[MAX_SYMBOLS];
 
 #define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
+
+class PipeBuf
+{
+protected:
+   int _fd;
+   char _buf[PIPE_BUF];
+   size_t _written;
+
+public:
+   PipeBuf(int fd) :
+      _fd(fd),
+      _written(0)
+   {}
+
+   void
+   write(const void *buf, size_t nbytes) {
+      if (nbytes) {
+         assert(_written + nbytes <= PIPE_BUF);
+         memcpy(_buf + _written, buf, nbytes);
+         _written += nbytes;
+      }
+   }
+
+   void
+   flush(void) {
+      if (_written) {
+         ::write(_fd, _buf, _written);
+         _written = 0;
+      }
+   }
+
+
+   ~PipeBuf(void) {
+      flush();
+   }
+};
+
+
 static inline void
-_lookup(void *addr) {
+_lookup(PipeBuf &buf, void *addr) {
    unsigned key = (size_t)addr % MAX_SYMBOLS;
 
    Symbol *sym = &symbols[key];
@@ -129,13 +168,13 @@ _lookup(void *addr) {
       moduleNo = 0;
    }
 
-   write(fd, &addr, sizeof addr);
-   write(fd, &offset, sizeof offset);
-   write(fd, &moduleNo, sizeof moduleNo);
+   buf.write(&addr, sizeof addr);
+   buf.write(&offset, sizeof offset);
+   buf.write(&moduleNo, sizeof moduleNo);
    if (newModule) {
       size_t len = strlen(name);
-      write(fd, &len, sizeof len);
-      write(fd, name, len);
+      buf.write(&len, sizeof len);
+      buf.write(name, len);
    }
 }
 
@@ -206,6 +245,9 @@ _update(const void *ptr, ssize_t size) {
    static int recursion = 0;
 
    if (recursion++ <= 0) {
+      void *addrs[10];
+      size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
+
       total_size += size;
 
       if (fd < 0) {
@@ -217,26 +259,21 @@ _update(const void *ptr, ssize_t size) {
             abort();
          }
 
-         char c = sizeof(void *);
-         write(fd, &c, 1);
       }
 
-      write(fd, &ptr, sizeof ptr);
-      write(fd, &size, sizeof size);
+      PipeBuf buf(fd);
 
-      void *array[10];
+      buf.write(&ptr, sizeof ptr);
+      buf.write(&size, sizeof size);
 
-      // get void*'s for all entries on the stack
-      size_t count = backtrace(array, ARRAY_SIZE(array));
 
       unsigned char c = (unsigned char) count;
-      write(fd, &c, 1);
+      buf.write(&c, 1);
 
       for (size_t i = 0; i < count; ++i) {
-         void *addr = array[i];
-         _lookup(addr);
+         void *addr = addrs[i];
+         _lookup(buf, addr);
       }
-
    } else {
        //fprintf(stderr, "memtrail: warning: recursion\n");
    }
