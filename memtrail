@@ -408,7 +408,7 @@ class Parser:
         except struct.error:
             pass
         except KeyboardInterrupt:
-            pass
+            self.heap = Heap()
         self.on_finish()
 
     # ./libmemtrail.so(+0xead)[0x2b54cc593ead]
