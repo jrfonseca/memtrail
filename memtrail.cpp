@@ -81,8 +81,6 @@ struct Symbol {
 #define MAX_SYMBOLS 131071
 static Symbol symbols[MAX_SYMBOLS];
 
-#define BINARY
-
 #define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
 static inline void
@@ -131,8 +129,6 @@ _lookup(void *addr) {
       moduleNo = 0;
    }
 
-#ifdef BINARY
-
    write(fd, &addr, sizeof addr);
    write(fd, &offset, sizeof offset);
    write(fd, &moduleNo, sizeof moduleNo);
@@ -141,14 +137,6 @@ _lookup(void *addr) {
       write(fd, &len, sizeof len);
       write(fd, name, len);
    }
-#else
-   char buf[512];
-   int len;
-   len = snprintf(buf, sizeof buf, "%p %s +0x%x\n", addr, name, (unsigned)offset);
-   if (len > 0) {
-      write(fd, buf, len);
-   }
-#endif
 }
 
 enum PIPE_FILE_DESCRIPTERS
@@ -222,48 +210,33 @@ _update(const void *ptr, ssize_t size) {
 
       if (fd < 0) {
          mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-         //fd = open("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
          fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
 
          if (fd < 0) {
+            fprintf(stderr, "could not open memtrail.data\n");
             abort();
          }
 
-#ifdef BINARY
          char c = sizeof(void *);
          write(fd, &c, 1);
-#endif
       }
 
-#ifdef BINARY
       write(fd, &ptr, sizeof ptr);
       write(fd, &size, sizeof size);
-#else
-      char buf[32];
-      int len = snprintf(buf, sizeof buf, "%p %lli\n", ptr, (long long)size);
-      if (len > 0) {
-         write(fd, buf, len);
-      }
-#endif
 
       void *array[10];
 
       // get void*'s for all entries on the stack
       size_t count = backtrace(array, ARRAY_SIZE(array));
 
-#ifdef BINARY
       unsigned char c = (unsigned char) count;
       write(fd, &c, 1);
-#endif
 
       for (size_t i = 0; i < count; ++i) {
          void *addr = array[i];
          _lookup(addr);
       }
 
-#ifndef BINARY
-      write(fd, "\n", 1);
-#endif
    } else {
        //fprintf(stderr, "memtrail: warning: recursion\n");
    }
