@@ -66,6 +66,11 @@ def record(args):
 
     optparser = OptionParser(
         usage="\n\t%prog record [options] -- program [args] ...")
+    optparser.add_option(
+        '-d', '--debug',
+        action="store_true",
+        dest="debug", default=False,
+        help="start within gdb")
     (options, args) = optparser.parse_args(args)
 
     if not args:
@@ -76,10 +81,21 @@ def record(args):
         sys.error.write('memtrail: error: %s not found\n' % ld_preload)
         sys.exit(1)
 
-    env = os.environ.copy()
-    env['LD_PRELOAD'] = ld_preload
+    if options.debug:
+        # http://stackoverflow.com/questions/4703763/how-to-run-gdb-with-ld-preload
+        cmd = [
+            'gdb',
+            '--ex', 'set exec-wrapper env LD_PRELOAD=%s' % ld_preload,
+            '--args'
+        ] + args
+        env = None
+    else:
+        cmd = args
+        env = os.environ.copy()
+        env['LD_PRELOAD'] = ld_preload
 
-    retcode = subprocess.call(args, env=env)
+    retcode = subprocess.call(cmd, env=env)
+
     sys.exit(retcode)
 
 
