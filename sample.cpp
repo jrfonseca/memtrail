@@ -85,9 +85,11 @@ test_posix_memalign(void)
 
    // allocate some
    posix_memalign(&p, 16, 1024);
+   assert(((size_t)p & 15) == 0);
 
    // leak some
-   posix_memalign(&q, 16, 1024);
+   posix_memalign(&q, 4096, 1024);
+   assert(((size_t)q & 4095) == 0);
    leaked += 1024;
 
    // free some
