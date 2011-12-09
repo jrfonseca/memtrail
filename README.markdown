@@ -1,7 +1,7 @@
 About
 =====
 
-THIS IS WORK IN PROGRESS AND IS NOT READ FOR GENERAL CONSUMPTION.
+THIS IS WORK IN PROGRESS AND IS NOT READY FOR GENERAL CONSUMPTION.
 
 **memtrail** is a `LD_PRELOAD` based memory debugger/profiler for Linux.
 
@@ -9,7 +9,8 @@ There are already many other open-source memory debugging/profiling tools for
 Linux, several of which are listed on Links section below, and the most
 powerful arguably being Valgrind.  However, I needed a tool that could quantify
 leaks and identify memory hogs, for long-running and CPU intensive workloads,
-which simply run too slow under Valgrind's dynamic binary instrumentation.
+which simply run too slow under Valgrind's dynamic binary instrumentation,
+hence this project.
 
 
 Requirements
@@ -56,7 +57,7 @@ Memory debugging:
 
 * [glibc mtrace](http://www.gnu.org/s/hello/manual/libc/Allocation-Debugging.html)
 
-* [Hans-Boehm garbagge collector](http://www.hpl.hp.com/personal/Hans_Boehm/gc/leak.html)
+* [Hans-Boehm garbage collector](http://www.hpl.hp.com/personal/Hans_Boehm/gc/leak.html)
 
 * [Leaky](http://mxr.mozilla.org/mozilla/source/tools/leaky/leaky.html)
 
