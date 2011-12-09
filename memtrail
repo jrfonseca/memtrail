@@ -587,7 +587,7 @@ class Reporter(Parser):
             tree = heap.tree()
             tree.write(sys.stdout, threshold = threshold)
             sys.stdout.write('\n')
-            heap.graph('memprof.%s.dot' % label, threshold = threshold)
+            heap.graph('memtrail.%s.dot' % label, threshold = threshold)
             sys.stdout.write('\n')
 
 
