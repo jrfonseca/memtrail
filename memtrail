@@ -29,6 +29,7 @@ import gzip
 import optparse
 import os.path
 import re
+import signal
 import struct
 import subprocess
 import sys
@@ -112,6 +113,12 @@ class Context:
         self.frames = frames
 
 
+def _ignore_sigint():
+    # Prevent subprocesses from receiving ctrl-c
+    # http://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 class Module:
 
     def __init__(self, path):
@@ -145,7 +152,7 @@ class Module:
                     '-f',
                     '-C',
             ]
-            self.addr2line = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            self.addr2line = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=_ignore_sigint)
         p = self.addr2line
 
         if p.returncode is not None:
@@ -437,7 +444,7 @@ class Parser:
         except struct.error:
             pass
         except KeyboardInterrupt:
-            pass
+            sys.stdout.write('\n')
 
     # ./libmemtrail.so(+0xead)[0x2b54cc593ead]
     frame_re = re.compile(r'^(?P<module>[^()]*)(?:\((?P<symbol>.*)\+(?P<offset>0x[0-9a-fA-F]+)\))?\[(?P<address>0x[0-9a-fA-F]+)\]$')
