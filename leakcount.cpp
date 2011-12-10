@@ -6,6 +6,15 @@
 #include <errno.h>
 #include <dlfcn.h>
 
+#if __GNUC__ >= 4
+   #define PUBLIC __attribute__ ((visibility("default")))
+   #define PRIVATE __attribute__ ((visibility("hidden")))
+#else
+   #define PUBLIC
+   #define PRIVATE
+#endif
+
+
 typedef void *(*malloc_ptr_t)(size_t size);
 typedef void (*free_ptr_t)(void *ptr);
 
@@ -20,7 +29,8 @@ struct header_t {
 
 static size_t total_size = 0;
 
-int posix_memalign(void **memptr, size_t alignment, size_t size)
+PUBLIC int
+posix_memalign(void **memptr, size_t alignment, size_t size)
 {
    void *ptr;
    struct header_t *hdr;
@@ -110,12 +120,14 @@ static inline void _free(void *ptr)
 }
 
 
-void *malloc(size_t size)
+PUBLIC void *
+malloc(size_t size)
 {
    return _malloc(size);
 }
 
-void free(void *ptr)
+PUBLIC void
+free(void *ptr)
 {
    _free(ptr);
 }
@@ -127,7 +139,8 @@ void free(void *ptr)
  * implementing calloc in terms of malloc we avoid that, and have a simpler
  * implementation.
  */
-void *calloc(size_t nmemb, size_t size)
+PUBLIC void *
+calloc(size_t nmemb, size_t size)
 {
    void *ptr;
    ptr = _malloc(nmemb * size);
@@ -138,7 +151,8 @@ void *calloc(size_t nmemb, size_t size)
 }
 
 
-void *realloc(void *ptr, size_t size)
+PUBLIC void *
+realloc(void *ptr, size_t size)
 {
    struct header_t *hdr;
    void *new_ptr;
@@ -170,22 +184,26 @@ void *realloc(void *ptr, size_t size)
 }
 
 
-void* operator new(size_t size) {
+PUBLIC void *
+operator new(size_t size) {
    return _malloc(size);
 }
 
 
-void* operator new[] (size_t size) {
+PUBLIC void *
+operator new[] (size_t size) {
    return _malloc(size);
 }
 
 
-void operator delete (void *ptr) {
+PUBLIC void
+operator delete (void *ptr) {
    _free(ptr);
 }
 
 
-void operator delete[] (void *ptr) {
+PUBLIC void
+operator delete[] (void *ptr) {
    _free(ptr);
 }
 
