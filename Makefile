@@ -9,7 +9,10 @@ libmemtrail.so: memtrail.cpp
 sample: sample.cpp
 	$(CXX) -O0 -g2 -o $@ $< -ldl
 
-test: libmemtrail.so sample
+pre-test: libmemtrail.so
+	nm -D libmemtrail.so | sed -n 's/^[0-9a-fA-F]\+ T //p' | diff -du - symbols.txt
+
+test: pre-test sample
 	./memtrail record ./sample
 	./memtrail dump
 	./memtrail report

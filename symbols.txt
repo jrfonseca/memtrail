@@ -1,0 +1,11 @@
+_ZdaPv
+_ZdlPv
+_Znam
+_Znwm
+_fini
+_init
+calloc
+free
+malloc
+posix_memalign
+realloc
