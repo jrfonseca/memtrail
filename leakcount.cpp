@@ -22,6 +22,38 @@ static malloc_ptr_t malloc_ptr = NULL;
 static free_ptr_t free_ptr = NULL;
 
 
+static inline void *
+real_malloc(size_t size)
+{
+   if (!malloc_ptr) {
+      malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
+      if (!malloc_ptr) {
+         return NULL;
+      }
+   }
+
+   assert(malloc_ptr != &malloc);
+
+   return malloc_ptr(size);
+}
+
+
+static inline void
+real_free(void *ptr)
+{
+   if (!free_ptr) {
+      free_ptr = (free_ptr_t)dlsym(RTLD_NEXT, "free");
+      if (!free_ptr) {
+         return;
+      }
+   }
+
+   assert(free_ptr != &free);
+
+   free_ptr(ptr);
+}
+
+
 struct header_t {
    size_t size;
    void *ptr;
@@ -42,14 +74,7 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
       return EINVAL;
    }
 
-   if (!malloc_ptr) {
-      malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
-      if (!malloc_ptr) {
-	 return -ENOMEM;
-      }
-   }
-
-   ptr = malloc_ptr(alignment + sizeof *hdr + size);
+   ptr = real_malloc(alignment + sizeof *hdr + size);
    if (!ptr) {
       return -ENOMEM;
    }
@@ -72,21 +97,8 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
 static inline void *_malloc(size_t size)
 {
    struct header_t *hdr;
-   static unsigned reentrant = 0;
 
-   if (!malloc_ptr) {
-      if (reentrant) {
-	 return NULL;
-      }
-      ++reentrant;
-      malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
-      if (!malloc_ptr) {
-         return NULL;
-      }
-      assert(malloc_ptr != &malloc);
-   }
-
-   hdr = (struct header_t *)malloc_ptr(sizeof *hdr + size);
+   hdr = (struct header_t *)real_malloc(sizeof *hdr + size);
    if (!hdr) {
       return NULL;
    }
@@ -109,14 +121,7 @@ static inline void _free(void *ptr)
 
    total_size -= hdr->size;
 
-   if (!free_ptr) {
-      free_ptr = (free_ptr_t)dlsym(RTLD_NEXT, "free");
-      if (!free_ptr) {
-         return;
-      }
-   }
-
-   free_ptr(hdr->ptr);
+   real_free(hdr->ptr);
 }
 
 
