@@ -69,6 +69,8 @@ Memory profiling:
 
 * [Valgrind's Massif](http://valgrind.org/docs/manual/ms-manual.html)
 
+* [Google Performance Tools](http://google-perftools.googlecode.com/svn/trunk/doc/heapprofile.html)
+
 * [MemProf](http://www.secretlabs.de/projects/memprof/)
 
 Catalogs:
