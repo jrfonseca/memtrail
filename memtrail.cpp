@@ -134,12 +134,13 @@ protected:
    size_t _written;
 
 public:
+   inline
    PipeBuf(int fd) :
       _fd(fd),
       _written(0)
    {}
 
-   void
+   inline void
    write(const void *buf, size_t nbytes) {
       if (nbytes) {
          assert(_written + nbytes <= PIPE_BUF);
@@ -148,7 +149,7 @@ public:
       }
    }
 
-   void
+   inline void
    flush(void) {
       if (_written) {
          ::write(_fd, _buf, _written);
@@ -157,6 +158,7 @@ public:
    }
 
 
+   inline
    ~PipeBuf(void) {
       flush();
    }
