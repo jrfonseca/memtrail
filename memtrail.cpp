@@ -252,11 +252,11 @@ _gzopen(const char *name, int oflag, mode_t mode)
       // child
       out = open(name, oflag, mode);
 
-      ret = dup2(parentToChild[ READ_FD  ], STDIN_FILENO);
+      ret = dup2(parentToChild[READ_FD], STDIN_FILENO);
       assert(ret != -1);
       ret = dup2(out, STDOUT_FILENO);
       assert(ret != -1);
-      ret = close(parentToChild [ WRITE_FD ]);
+      ret = close(parentToChild[WRITE_FD]);
       assert(ret == 0);
 
       // Don't want to track gzip
@@ -269,10 +269,10 @@ _gzopen(const char *name, int oflag, mode_t mode)
 
    default:
       // parent
-      ret = close(parentToChild [ READ_FD  ]);
+      ret = close(parentToChild[READ_FD]);
       assert(ret == 0);
 
-      return parentToChild[ WRITE_FD ];
+      return parentToChild[WRITE_FD];
    }
 
    return -1;
