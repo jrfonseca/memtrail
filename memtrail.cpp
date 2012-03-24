@@ -60,10 +60,31 @@ static malloc_ptr_t malloc_ptr = NULL;
 static free_ptr_t free_ptr = NULL;
 
 
+/**
+ * calloc is called by dlsym, potentially causing infinite recursion, so
+ * use a dummy malloc to prevent that. See also
+ * http://blog.bigpixel.ro/2010/09/interposing-calloc-on-linux/
+ */
+static void *
+dummy_malloc(size_t size)
+{
+   (void)size;
+   return NULL;
+}
+
+
+static void
+dummy_free(void *ptr)
+{
+   (void)ptr;
+}
+
+
 static inline void *
 real_malloc(size_t size)
 {
    if (!malloc_ptr) {
+      malloc_ptr = &dummy_malloc;
       malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
       if (!malloc_ptr) {
          return NULL;
@@ -80,6 +101,7 @@ static inline void
 real_free(void *ptr)
 {
    if (!free_ptr) {
+      free_ptr = &dummy_free;
       free_ptr = (free_ptr_t)dlsym(RTLD_NEXT, "free");
       if (!free_ptr) {
          return;
@@ -410,12 +432,6 @@ free(void *ptr)
 }
 
 
-/**
- * calloc is called by dlsym, potentially causing infinite recursion, per
- * http://blog.bigpixel.ro/2010/09/interposing-calloc-on-linux/ . By
- * implementing calloc in terms of malloc we avoid that, and have a simpler
- * implementation.
- */
 PUBLIC void *
 calloc(size_t nmemb, size_t size)
 {
