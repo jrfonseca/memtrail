@@ -433,11 +433,11 @@ class Filter:
             if self.include_module_re is not None or self.exclude_module_re is not None:
                 module = symbol.module
                 if self.include_module_re is not None:
-                    mo = self.include_module_re.search(module)
+                    mo = self.include_module_re.search(module.path)
                     if mo:
                         return True
                 if self.exclude_module_re is not None:
-                    mo = self.exclude_module_re.search(module)
+                    mo = self.exclude_module_re.search(module.path)
                     if mo:
                         return False
         return self.default
