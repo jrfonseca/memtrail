@@ -267,7 +267,7 @@ _gzopen(const char *name, int oflag, mode_t mode)
    pid = fork();
    switch (pid) {
    case -1:
-      fprintf(stderr, "leaktrace: error: could not fork\n");
+      fprintf(stderr, "memtrail: error: could not fork\n");
       abort();
 
    case 0:
