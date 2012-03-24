@@ -77,7 +77,7 @@ def record(args):
     if not args:
         optparser.error('insufficient number of arguments')
 
-    ld_preload = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), 'libmemtrail.so'))
+    ld_preload = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libmemtrail.so'))
     if not os.path.exists(ld_preload):
         sys.error.write('memtrail: error: %s not found\n' % ld_preload)
         sys.exit(1)
