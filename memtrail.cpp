@@ -52,6 +52,13 @@
    #define PRIVATE
 #endif
 
+#define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
+
+
+#define MAX_STACK 16
+#define MAX_MODULES 128
+#define MAX_SYMBOLS 131071
+
 
 typedef void *(*malloc_ptr_t)(size_t size);
 typedef void (*free_ptr_t)(void *ptr);
@@ -134,7 +141,7 @@ struct Module {
    void       *dli_fbase;
 };
 
-static Module modules[128];
+static Module modules[MAX_MODULES];
 unsigned numModules = 0;
 
 struct Symbol {
@@ -142,10 +149,8 @@ struct Symbol {
    Module *module;
 };
 
-#define MAX_SYMBOLS 131071
 static Symbol symbols[MAX_SYMBOLS];
 
-#define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
 
 class PipeBuf
@@ -310,7 +315,7 @@ _update(const void *ptr, ssize_t size) {
    static int recursion = 0;
 
    if (recursion++ <= 0) {
-      void *addrs[10];
+      void *addrs[MAX_STACK];
       size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
 
       total_size += size;
