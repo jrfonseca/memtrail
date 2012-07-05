@@ -43,6 +43,8 @@
 
 #include <execinfo.h>
 
+#include <new>
+
 
 #if __GNUC__ >= 4
    #define PUBLIC __attribute__ ((visibility("default")))
@@ -486,25 +488,49 @@ realloc(void *ptr, size_t size)
 
 
 PUBLIC void *
-operator new(size_t size) {
+operator new(size_t size) throw (std::bad_alloc) {
    return _malloc(size);
 }
 
 
 PUBLIC void *
-operator new[] (size_t size) {
+operator new[] (size_t size) throw (std::bad_alloc) {
    return _malloc(size);
 }
 
 
 PUBLIC void
-operator delete (void *ptr) {
+operator delete (void *ptr) throw () {
    _free(ptr);
 }
 
 
 PUBLIC void
-operator delete[] (void *ptr) {
+operator delete[] (void *ptr) throw () {
+   _free(ptr);
+}
+
+
+PUBLIC void *
+operator new(size_t size, const std::nothrow_t&) throw () {
+   return _malloc(size);
+}
+
+
+PUBLIC void *
+operator new[] (size_t size, const std::nothrow_t&) throw () {
+   return _malloc(size);
+}
+
+
+PUBLIC void
+operator delete (void *ptr, const std::nothrow_t&) throw () {
+   _free(ptr);
+}
+
+
+PUBLIC void
+operator delete[] (void *ptr, const std::nothrow_t&) throw () {
    _free(ptr);
 }
 
