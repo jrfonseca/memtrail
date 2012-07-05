@@ -64,65 +64,8 @@
 #define MAX_SYMBOLS 131071
 
 
-typedef void *(*malloc_ptr_t)(size_t size);
-typedef void (*free_ptr_t)(void *ptr);
-
-static malloc_ptr_t malloc_ptr = NULL;
-static free_ptr_t free_ptr = NULL;
-
-
-/**
- * calloc is called by dlsym, potentially causing infinite recursion, so
- * use a dummy malloc to prevent that. See also
- * http://blog.bigpixel.ro/2010/09/interposing-calloc-on-linux/
- */
-static void *
-dummy_malloc(size_t size)
-{
-   (void)size;
-   return NULL;
-}
-
-
-static void
-dummy_free(void *ptr)
-{
-   (void)ptr;
-}
-
-
-static inline void *
-real_malloc(size_t size)
-{
-   if (!malloc_ptr) {
-      malloc_ptr = &dummy_malloc;
-      malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
-      if (!malloc_ptr) {
-         return NULL;
-      }
-   }
-
-   assert(malloc_ptr != &malloc);
-
-   return malloc_ptr(size);
-}
-
-
-static inline void
-real_free(void *ptr)
-{
-   if (!free_ptr) {
-      free_ptr = &dummy_free;
-      free_ptr = (free_ptr_t)dlsym(RTLD_NEXT, "free");
-      if (!free_ptr) {
-         return;
-      }
-   }
-
-   assert(free_ptr != &free);
-
-   free_ptr(ptr);
-}
+extern "C" void *__libc_malloc(size_t size);
+extern "C" void __libc_free(void *ptr);
 
 
 struct header_t {
@@ -369,7 +312,7 @@ _memalign(size_t alignment, size_t size)
       return NULL;
    }
 
-   ptr = real_malloc(alignment + sizeof *hdr + size);
+   ptr = __libc_malloc(alignment + sizeof *hdr + size);
    if (!ptr) {
       return NULL;
    }
@@ -393,7 +336,7 @@ _malloc(size_t size)
    struct header_t *hdr;
    void *res;
 
-   hdr = (struct header_t *)real_malloc(sizeof *hdr + size);
+   hdr = (struct header_t *)__libc_malloc(sizeof *hdr + size);
    if (!hdr) {
       return NULL;
    }
@@ -419,10 +362,11 @@ static inline void _free(void *ptr)
 
    _update(ptr, -hdr->size);
 
-   real_free(hdr->ptr);
+   __libc_free(hdr->ptr);
 }
 
 
+extern "C"
 PUBLIC int
 posix_memalign(void **memptr, size_t alignment, size_t size)
 {
@@ -441,24 +385,28 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
    return 0;
 }
 
+extern "C"
 PUBLIC void *
 memalign(size_t alignment, size_t size)
 {
    return _memalign(alignment, size);
 }
 
+extern "C"
 PUBLIC void *
 valloc(size_t size)
 {
    return _memalign(sysconf(_SC_PAGESIZE), size);
 }
 
+extern "C"
 PUBLIC void *
 malloc(size_t size)
 {
    return _malloc(size);
 }
 
+extern "C"
 PUBLIC void
 free(void *ptr)
 {
@@ -466,6 +414,7 @@ free(void *ptr)
 }
 
 
+extern "C"
 PUBLIC void *
 calloc(size_t nmemb, size_t size)
 {
@@ -478,6 +427,7 @@ calloc(size_t nmemb, size_t size)
 }
 
 
+extern "C"
 PUBLIC void
 cfree(void *ptr)
 {
@@ -485,6 +435,7 @@ cfree(void *ptr)
 }
 
 
+extern "C"
 PUBLIC void *
 realloc(void *ptr, size_t size)
 {
@@ -521,6 +472,7 @@ realloc(void *ptr, size_t size)
 }
 
 
+extern "C"
 PUBLIC char *
 strdup(const char *s)
 {
@@ -533,6 +485,7 @@ strdup(const char *s)
 }
 
 
+extern "C"
 PUBLIC int
 vasprintf(char **strp, const char *fmt, va_list ap)
 {
@@ -557,6 +510,7 @@ vasprintf(char **strp, const char *fmt, va_list ap)
    return vsnprintf(*strp, size, fmt, ap);
 }
 
+extern "C"
 PUBLIC int
 asprintf(char **strp, const char *format, ...)
 {
