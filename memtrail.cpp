@@ -423,6 +423,10 @@ static inline void _free(void *ptr)
 }
 
 
+/*
+ * C
+ */
+
 PUBLIC int
 posix_memalign(void **memptr, size_t alignment, size_t size)
 {
@@ -502,14 +506,6 @@ realloc(void *ptr, size_t size)
 
    hdr = (struct header_t *)ptr - 1;
 
-#if 0
-   if (hdr->size >= size) {
-      _update(ptr, size - hdr->size);
-      hdr->size = size;
-      return ptr;
-   }
-#endif
-  
    new_ptr = _malloc(size);
    if (new_ptr) {
       size_t min_size = hdr->size >= size ? size : hdr->size;
@@ -569,6 +565,10 @@ asprintf(char **strp, const char *format, ...)
 }
 
 
+/*
+ * C++
+ */
+
 PUBLIC void *
 operator new(size_t size) throw (std::bad_alloc) {
    return _malloc(size);
@@ -616,6 +616,10 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
    _free(ptr);
 }
 
+
+/*
+ * Constructor/destructor
+ */
 
 class Main
 {
