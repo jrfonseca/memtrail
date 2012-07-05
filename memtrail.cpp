@@ -46,6 +46,8 @@
 #include <libunwind.h>
 
 #include <new>
+#include <map>
+#include <limits>
 
 
 #if __GNUC__ >= 4
@@ -61,7 +63,6 @@
 
 #define MAX_STACK 16
 #define MAX_MODULES 128
-#define MAX_SYMBOLS 131071
 
 
 extern "C" void *__libc_malloc(size_t size);
@@ -87,6 +88,60 @@ _assert_fail(const char *expr,
 #else
 #define assert(expr) while (0) { (void)(expr) }
 #endif
+
+
+/**
+ * Custom STL allocator that invokes __libc_malloc and __libc_free directly,
+ * enabling the use of STL containers for our internal data structures.
+ */
+template< class T >
+class libc_allocator {
+public:
+   typedef T value_type;
+   typedef value_type * pointer;
+   typedef const value_type * const_pointer;
+   typedef value_type & reference;
+   typedef const value_type & const_reference;
+   typedef std::size_t size_type;
+   typedef std::ptrdiff_t difference_type;
+
+   template< class U >
+   struct rebind {
+      typedef libc_allocator<U> other;
+   };
+
+   inline libc_allocator() {}
+   inline ~libc_allocator() {}
+   inline libc_allocator(const libc_allocator &) {}
+   template< class U >
+   inline libc_allocator(const libc_allocator<U> &) {}
+
+   inline pointer
+   address(reference r) { return &r; }
+   inline const_pointer
+   address(const_reference r) { return &r; }
+
+   inline pointer
+   allocate(size_type n, std::allocator<void>::const_pointer hint = 0) {
+     return reinterpret_cast<pointer>(__libc_malloc(n * sizeof (T)));
+   }
+
+   inline void
+   deallocate(pointer p, size_type) {
+      __libc_free(p);
+   }
+
+   inline size_type
+   max_size() const {
+      return std::numeric_limits<size_type>::max() / sizeof(T);
+   }
+
+   inline void construct(pointer p, const T& t) { new(p) T(t); }
+   inline void destroy(pointer p) { p->~T(); }
+
+   inline bool operator== (libc_allocator const&) { return true; }
+   inline bool operator!= (libc_allocator const& a) { return !operator==(a); }
+};
 
 
 /**
@@ -152,12 +207,9 @@ struct Module {
 static Module modules[MAX_MODULES];
 static unsigned numModules = 0;
 
-struct Symbol {
-   void *addr;
-   Module *module;
-};
+typedef std::map< void *, Module *, std::less<void *>, libc_allocator< std::pair<void * const, Module * > > > SymbolMap;
 
-static Symbol symbols[MAX_SYMBOLS];
+static SymbolMap symbols;
 
 
 
@@ -205,16 +257,15 @@ public:
 
 static void
 _lookup(PipeBuf &buf, void *addr) {
-   unsigned key = (size_t)addr % MAX_SYMBOLS;
 
-   Symbol *sym = &symbols[key];
-
+   Module *module = NULL;
    bool newModule = false;
 
-   if (sym->addr != addr) {
+   SymbolMap::const_iterator it;
+   it = symbols.find(addr);
+   if (it == symbols.end()) {
       Dl_info info;
       if (dladdr(addr, &info)) {
-         Module *module = NULL;
          for (unsigned i = 0; i < numModules; ++i) {
             if (strcmp(modules[i].dli_fname, info.dli_fname) == 0) {
                module = &modules[i];
@@ -227,22 +278,20 @@ _lookup(PipeBuf &buf, void *addr) {
             module->dli_fbase = info.dli_fbase;
             newModule = true;
          }
-         sym->module = module;
-      } else {
-         sym->module = NULL;
       }
-
-      sym->addr = addr;
+      symbols[addr] = module;
+   } else {
+      module = it->second;
    }
 
    size_t offset;
    const char * name;
    unsigned char moduleNo;
 
-   if (sym->module) {
-      name = sym->module->dli_fname;
-      offset = ((size_t)addr - (size_t)sym->module->dli_fbase);
-      moduleNo = 1 + sym->module - modules;
+   if (module) {
+      name = module->dli_fname;
+      offset = ((size_t)addr - (size_t)module->dli_fbase);
+      moduleNo = 1 + module - modules;
    } else {
       name = "";
       offset = (size_t)addr;
