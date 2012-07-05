@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <dlfcn.h>
 
@@ -78,7 +79,7 @@ test_calloc(void)
 
 
 static void
-test_posix_memalign(void)
+test_memalign(void)
 {
    void *p;
    void *q;
@@ -119,6 +120,23 @@ test_cxx(void)
 
 
 static void
+test_string(void)
+{
+   char *p;
+   int n;
+
+   p = strdup("foo");
+   free(p);
+
+   p = NULL;
+   n = asprintf(&p, "%u", 12345);
+   assert(n == 5);
+
+   free(p);
+}
+
+
+static void
 test_subprocess(void)
 {
    const char *ld_preload = getenv("LD_PRELOAD");
@@ -134,8 +152,9 @@ main(int argc, char *argv[])
    test_dlsym();
    test_malloc();
    test_calloc();
-   test_posix_memalign();
+   test_memalign();
    test_cxx();
+   test_string();
    test_subprocess();
 
    printf("Should leak %lu bytes...\n", leaked);

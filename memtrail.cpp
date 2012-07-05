@@ -32,7 +32,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
+#include <malloc.h>
 #include <errno.h>
 #include <dlfcn.h>
 #include <pthread.h>
@@ -355,23 +357,21 @@ _update(const void *ptr, ssize_t size) {
 }
 
 
-PUBLIC int
-posix_memalign(void **memptr, size_t alignment, size_t size)
+static inline void *
+_memalign(size_t alignment, size_t size)
 {
    void *ptr;
    struct header_t *hdr;
    void *res;
 
-   *memptr = NULL;
-
    if ((alignment & (alignment - 1)) != 0 ||
        (alignment & (sizeof(void*) - 1)) != 0) {
-      return EINVAL;
+      return NULL;
    }
 
    ptr = real_malloc(alignment + sizeof *hdr + size);
    if (!ptr) {
-      return -ENOMEM;
+      return NULL;
    }
 
    hdr = (struct header_t *)((((size_t)ptr + sizeof *hdr + alignment - 1) & ~(alignment - 1)) - sizeof *hdr);
@@ -383,11 +383,8 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
 
    _update(res, size);
 
-   *memptr = res;
-
-   return 0;
+   return res;
 }
-
 
 
 static inline void *
@@ -426,6 +423,36 @@ static inline void _free(void *ptr)
 }
 
 
+PUBLIC int
+posix_memalign(void **memptr, size_t alignment, size_t size)
+{
+   *memptr = NULL;
+
+   if ((alignment & (alignment - 1)) != 0 ||
+       (alignment & (sizeof(void*) - 1)) != 0) {
+      return EINVAL;
+   }
+
+   *memptr =  _memalign(alignment, size);
+   if (!*memptr) {
+      return -ENOMEM;
+   }
+
+   return 0;
+}
+
+PUBLIC void *
+memalign(size_t alignment, size_t size)
+{
+   return _memalign(alignment, size);
+}
+
+PUBLIC void *
+valloc(size_t size)
+{
+   return _memalign(sysconf(_SC_PAGESIZE), size);
+}
+
 PUBLIC void *
 malloc(size_t size)
 {
@@ -448,6 +475,13 @@ calloc(size_t nmemb, size_t size)
       memset(ptr, 0, nmemb * size);
    }
    return ptr;
+}
+
+
+PUBLIC void
+cfree(void *ptr)
+{
+   _free(ptr);
 }
 
 
@@ -484,6 +518,54 @@ realloc(void *ptr, size_t size)
    }
 
    return new_ptr;
+}
+
+
+PUBLIC char *
+strdup(const char *s)
+{
+   size_t size = strlen(s) + 1;
+   char *ptr = (char *)_malloc(size);
+   if (ptr) {
+      memcpy(ptr, s, size);
+   }
+   return ptr;
+}
+
+
+PUBLIC int
+vasprintf(char **strp, const char *fmt, va_list ap)
+{
+   size_t size;
+
+   {
+      va_list ap_copy;
+      va_copy(ap_copy, ap);
+
+      char junk;
+      size = vsnprintf(&junk, 1, fmt, ap_copy);
+      assert(size >= 0);
+
+      va_end(ap_copy);
+   }
+
+   *strp = (char *)_malloc(size);
+   if (!*strp) {
+      return -1;
+   }
+
+   return vsnprintf(*strp, size, fmt, ap);
+}
+
+PUBLIC int
+asprintf(char **strp, const char *format, ...)
+{
+   int res;
+   va_list ap;
+   va_start(ap, format);
+   res = vasprintf(strp, format, ap);
+   va_end(ap);
+   return res;
 }
 
 
