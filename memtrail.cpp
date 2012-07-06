@@ -221,8 +221,10 @@ _gzopen(const char *name, int oflag, mode_t mode)
    pid = fork();
    switch (pid) {
    case -1:
-      fprintf(stderr, "memtrail: error: could not fork\n");
-      abort();
+      fprintf(stderr, "memtrail: warning could not fork\n");
+      close(parentToChild[READ_FD]);
+      close(parentToChild[WRITE_FD]);
+      return open(name, oflag, mode);
 
    case 0:
       // child
