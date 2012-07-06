@@ -255,6 +255,28 @@ _gzopen(const char *name, int oflag, mode_t mode)
 }
 
 
+static void
+_open(void) {
+   if (fd < 0) {
+      mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+      fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
+
+      if (fd < 0) {
+         fprintf(stderr, "could not open memtrail.data\n");
+         abort();
+      }
+   }
+}
+
+
+static void
+_close() {
+   if (fd >= 0) {
+      close(fd);
+   }
+}
+
+
 /**
  * Update/log changes to memory allocations.
  */
@@ -269,16 +291,7 @@ _update(const void *ptr, ssize_t size) {
 
       total_size += size;
 
-      if (fd < 0) {
-         mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-         fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
-
-         if (fd < 0) {
-            fprintf(stderr, "could not open memtrail.data\n");
-            abort();
-         }
-
-      }
+      _open();
 
       PipeBuf buf(fd);
 
@@ -573,15 +586,18 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
 }
 
 
+
 class Main
 {
 public:
    Main() {
       // Only trace the current process.
       unsetenv("LD_PRELOAD");
+      _open();
    }
 
    ~Main() {
+      _close();
       fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
    }
 };
