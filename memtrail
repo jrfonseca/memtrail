@@ -462,6 +462,9 @@ class Parser:
         self.symbols = {}
 
     def parse(self):
+        # TODO
+        addrsize = self.read('B')
+
         try:
             while True:
                 self.parse_event()

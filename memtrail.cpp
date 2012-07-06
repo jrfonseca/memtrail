@@ -267,6 +267,11 @@ _open(void) {
          fprintf(stderr, "could not open memtrail.data\n");
          abort();
       }
+
+      unsigned char c = sizeof(void *);
+      ssize_t ret;
+      ret = ::write(fd, &c, sizeof c);
+      assert(ret >= 0 && (size_t)ret == sizeof c);
    }
 }
 
