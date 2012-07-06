@@ -126,7 +126,9 @@ public:
    inline void
    flush(void) {
       if (_written) {
-         ::write(_fd, _buf, _written);
+         ssize_t ret;
+         ret = ::write(_fd, _buf, _written);
+         assert(ret >= 0 && (size_t)ret == _written);
          _written = 0;
       }
    }
