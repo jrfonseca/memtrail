@@ -446,13 +446,25 @@ class Filter:
 class Parser:
 
     def __init__(self, log):
-        self.log = GzipFile(log, 'rt')
+        self.log = open(log, 'rb')
+        magic = self.log.read(2)
+        if magic == '\037\213':
+            # gzip file
+            del self.log
+            self.log = GzipFile(log, 'rb')
+        else:
+            # raw data
+            self.log.seek(0, 0)
+        
         self.stamp = 0
 
         self.modules = {}
         self.symbols = {}
 
     def parse(self):
+        # TODO
+        addrsize = self.read('B')
+
         try:
             while True:
                 self.parse_event()

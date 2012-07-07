@@ -64,65 +64,8 @@
 #define MAX_SYMBOLS 131071
 
 
-typedef void *(*malloc_ptr_t)(size_t size);
-typedef void (*free_ptr_t)(void *ptr);
-
-static malloc_ptr_t malloc_ptr = NULL;
-static free_ptr_t free_ptr = NULL;
-
-
-/**
- * calloc is called by dlsym, potentially causing infinite recursion, so
- * use a dummy malloc to prevent that. See also
- * http://blog.bigpixel.ro/2010/09/interposing-calloc-on-linux/
- */
-static void *
-dummy_malloc(size_t size)
-{
-   (void)size;
-   return NULL;
-}
-
-
-static void
-dummy_free(void *ptr)
-{
-   (void)ptr;
-}
-
-
-static inline void *
-real_malloc(size_t size)
-{
-   if (!malloc_ptr) {
-      malloc_ptr = &dummy_malloc;
-      malloc_ptr = (malloc_ptr_t)dlsym(RTLD_NEXT, "malloc");
-      if (!malloc_ptr) {
-         return NULL;
-      }
-   }
-
-   assert(malloc_ptr != &malloc);
-
-   return malloc_ptr(size);
-}
-
-
-static inline void
-real_free(void *ptr)
-{
-   if (!free_ptr) {
-      free_ptr = &dummy_free;
-      free_ptr = (free_ptr_t)dlsym(RTLD_NEXT, "free");
-      if (!free_ptr) {
-         return;
-      }
-   }
-
-   assert(free_ptr != &free);
-
-   free_ptr(ptr);
-}
+extern "C" void *__libc_malloc(size_t size);
+extern "C" void __libc_free(void *ptr);
 
 
 struct header_t {
@@ -183,7 +126,9 @@ public:
    inline void
    flush(void) {
       if (_written) {
-         ::write(_fd, _buf, _written);
+         ssize_t ret;
+         ret = ::write(_fd, _buf, _written);
+         assert(ret >= 0 && (size_t)ret == _written);
          _written = 0;
       }
    }
@@ -276,8 +221,10 @@ _gzopen(const char *name, int oflag, mode_t mode)
    pid = fork();
    switch (pid) {
    case -1:
-      fprintf(stderr, "memtrail: error: could not fork\n");
-      abort();
+      fprintf(stderr, "memtrail: warning could not fork\n");
+      close(parentToChild[READ_FD]);
+      close(parentToChild[WRITE_FD]);
+      return open(name, oflag, mode);
 
    case 0:
       // child
@@ -310,6 +257,33 @@ _gzopen(const char *name, int oflag, mode_t mode)
 }
 
 
+static void
+_open(void) {
+   if (fd < 0) {
+      mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+      fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
+
+      if (fd < 0) {
+         fprintf(stderr, "could not open memtrail.data\n");
+         abort();
+      }
+
+      unsigned char c = sizeof(void *);
+      ssize_t ret;
+      ret = ::write(fd, &c, sizeof c);
+      assert(ret >= 0 && (size_t)ret == sizeof c);
+   }
+}
+
+
+static void
+_close() {
+   if (fd >= 0) {
+      close(fd);
+   }
+}
+
+
 /**
  * Update/log changes to memory allocations.
  */
@@ -324,16 +298,7 @@ _update(const void *ptr, ssize_t size) {
 
       total_size += size;
 
-      if (fd < 0) {
-         mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-         fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
-
-         if (fd < 0) {
-            fprintf(stderr, "could not open memtrail.data\n");
-            abort();
-         }
-
-      }
+      _open();
 
       PipeBuf buf(fd);
 
@@ -369,7 +334,7 @@ _memalign(size_t alignment, size_t size)
       return NULL;
    }
 
-   ptr = real_malloc(alignment + sizeof *hdr + size);
+   ptr = __libc_malloc(alignment + sizeof *hdr + size);
    if (!ptr) {
       return NULL;
    }
@@ -393,7 +358,7 @@ _malloc(size_t size)
    struct header_t *hdr;
    void *res;
 
-   hdr = (struct header_t *)real_malloc(sizeof *hdr + size);
+   hdr = (struct header_t *)__libc_malloc(sizeof *hdr + size);
    if (!hdr) {
       return NULL;
    }
@@ -419,7 +384,7 @@ static inline void _free(void *ptr)
 
    _update(ptr, -hdr->size);
 
-   real_free(hdr->ptr);
+   __libc_free(hdr->ptr);
 }
 
 
@@ -427,6 +392,7 @@ static inline void _free(void *ptr)
  * C
  */
 
+extern "C"
 PUBLIC int
 posix_memalign(void **memptr, size_t alignment, size_t size)
 {
@@ -445,24 +411,28 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
    return 0;
 }
 
+extern "C"
 PUBLIC void *
 memalign(size_t alignment, size_t size)
 {
    return _memalign(alignment, size);
 }
 
+extern "C"
 PUBLIC void *
 valloc(size_t size)
 {
    return _memalign(sysconf(_SC_PAGESIZE), size);
 }
 
+extern "C"
 PUBLIC void *
 malloc(size_t size)
 {
    return _malloc(size);
 }
 
+extern "C"
 PUBLIC void
 free(void *ptr)
 {
@@ -470,6 +440,7 @@ free(void *ptr)
 }
 
 
+extern "C"
 PUBLIC void *
 calloc(size_t nmemb, size_t size)
 {
@@ -482,6 +453,7 @@ calloc(size_t nmemb, size_t size)
 }
 
 
+extern "C"
 PUBLIC void
 cfree(void *ptr)
 {
@@ -489,6 +461,7 @@ cfree(void *ptr)
 }
 
 
+extern "C"
 PUBLIC void *
 realloc(void *ptr, size_t size)
 {
@@ -517,6 +490,7 @@ realloc(void *ptr, size_t size)
 }
 
 
+extern "C"
 PUBLIC char *
 strdup(const char *s)
 {
@@ -529,6 +503,7 @@ strdup(const char *s)
 }
 
 
+extern "C"
 PUBLIC int
 vasprintf(char **strp, const char *fmt, va_list ap)
 {
@@ -553,6 +528,7 @@ vasprintf(char **strp, const char *fmt, va_list ap)
    return vsnprintf(*strp, size, fmt, ap);
 }
 
+extern "C"
 PUBLIC int
 asprintf(char **strp, const char *format, ...)
 {
@@ -627,9 +603,11 @@ public:
    Main() {
       // Only trace the current process.
       unsetenv("LD_PRELOAD");
+      _open();
    }
 
    ~Main() {
+      _close();
       fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
    }
 };
