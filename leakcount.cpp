@@ -81,7 +81,11 @@ struct header_t {
    void *ptr;
 };
 
-static size_t total_size = 0;
+static ssize_t
+total_size = 0;
+
+static ssize_t
+max_size = 0;
 
 PUBLIC int
 posix_memalign(void **memptr, size_t alignment, size_t size)
@@ -104,6 +108,7 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
    hdr = (struct header_t *)((((size_t)ptr + sizeof *hdr + alignment - 1) & ~(alignment - 1)) - sizeof *hdr);
 
    total_size += size;
+   if (total_size > max_size) max_size = total_size;
    hdr->size = size;
    hdr->ptr = ptr;
 
@@ -126,6 +131,7 @@ static inline void *_malloc(size_t size)
    }
 
    total_size += size;
+   if (total_size > max_size) max_size = total_size;
    hdr->size = size;
    hdr->ptr = hdr;
    return &hdr[1];
@@ -238,7 +244,8 @@ public:
    }
 
    ~Main() {
-      fprintf(stderr, "leakcount: %lu bytes leaked\n", total_size);
+      fprintf(stderr, "leakcount: maximum %lu bytes\n", max_size);
+      fprintf(stderr, "leakcount: leaked %lu bytes\n", total_size);
    }
 };
 
