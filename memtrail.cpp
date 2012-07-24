@@ -77,7 +77,11 @@ struct header_t {
 static pthread_mutex_t
 mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
-static size_t total_size = 0;
+static ssize_t
+total_size = 0;
+
+static ssize_t
+max_size = 0;
 
 static int fd = -1;
 
@@ -297,6 +301,10 @@ _update(const void *ptr, ssize_t size) {
       size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
 
       total_size += size;
+
+      if (total_size > max_size) {
+         max_size = total_size;
+      }
 
       _open();
 
@@ -608,7 +616,8 @@ public:
 
    ~Main() {
       _close();
-      fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
+      fprintf(stderr, "memtrail: maximum %lli bytes\n", (long long int)max_size);
+      fprintf(stderr, "memtrail: leaked %lli bytes\n", (long long int)total_size);
    }
 };
 
