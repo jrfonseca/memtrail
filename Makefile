@@ -9,6 +9,7 @@ libmemtrail.so: memtrail.cpp
 
 gprof2dot.py:
 	wget --quiet --timestamping http://gprof2dot.jrfonseca.googlecode.com/git/gprof2dot.py
+	chmod +x gprof2dot.py
 
 sample: sample.cpp
 	$(CXX) -O0 -g2 -o $@ $< -ldl

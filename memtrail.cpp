@@ -616,8 +616,8 @@ public:
 
    ~Main() {
       _close();
-      fprintf(stderr, "memtrail: maximum %lli bytes\n", (long long int)max_size);
-      fprintf(stderr, "memtrail: leaked %lli bytes\n", (long long int)total_size);
+      fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
+      fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
    }
 };
 
