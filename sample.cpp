@@ -157,7 +157,7 @@ main(int argc, char *argv[])
    test_string();
    test_subprocess();
 
-   printf("Should leak %lu bytes...\n", leaked);
+   printf("Should leak %zu bytes...\n", leaked);
 
    return 0;
 }
