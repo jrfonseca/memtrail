@@ -34,7 +34,7 @@ Usage
 
 Run the application you want to debug as
 
-    memtrail /path/to/application [args...]
+    memtrail record /path/to/application [args...]
 
 and it will generate a record  `memtrail.data` in the current
 directory.

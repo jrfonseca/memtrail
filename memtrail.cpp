@@ -608,7 +608,7 @@ public:
 
    ~Main() {
       _close();
-      fprintf(stderr, "memtrail: %lu bytes leaked\n", total_size);
+      fprintf(stderr, "memtrail: %zu bytes leaked\n", total_size);
    }
 };
 
