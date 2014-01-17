@@ -14,7 +14,7 @@ sample: sample.cpp
 	$(CXX) -O0 -g2 -o $@ $< -ldl
 
 pre-test: libmemtrail.so memtrail.sym
-	$(NM) --dynamic --defined-only libmemtrail.so | sed -n 's/^[0-9a-fA-F]\+ T //p' | diff -du memtrail.sym -
+	$(NM) --dynamic --defined-only libmemtrail.so | sed -n 's/^[0-9a-fA-F]\+ T //p' | sort | diff -du memtrail.sym -
 
 test: pre-test sample
 	./memtrail record ./sample
