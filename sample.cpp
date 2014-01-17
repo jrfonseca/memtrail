@@ -25,7 +25,7 @@ main(int argc, char *argv[])
 
    posix_memalign(&p, 64, 2048);
 
-   printf("Should leak %lu bytes...\n", 512 + 1024 + 2048);
+   printf("Should leak %u bytes...\n", 512 + 1024 + 2048);
 
    return 0;
 }
