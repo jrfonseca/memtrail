@@ -26,6 +26,7 @@
 
 
 import gzip
+import json
 import optparse
 import os.path
 import re
@@ -317,63 +318,58 @@ class Heap:
         return root
 
     def graph(self, filename, threshold = default_threshold):
-        try:
-            import gprof2dot
-        except ImportError:
-            sys.stderr.write('warning: could not import gprof2dot -- graph not generated\n')
-            return
 
-        from gprof2dot import Profile, Function, Call, SAMPLES, SAMPLES2, TIME_RATIO, TOTAL_TIME_RATIO
 
-        profile = Profile()
-        profile[SAMPLES] = 0
+        costs = [
+            {
+                'description': 'Memory',
+                'unit': 'bytes',
+            },
+        ]
+
+        functions = []
+        functionIndices = {}
+
+        events = []
 
         for alloc in self.allocs.itervalues():
             callchain = []
 
             for symbol in alloc.context.frames:
                 function_id = symbol.id()
-                function_name = str(symbol)
                 try:
-                    function = profile.functions[function_id]
+                    functionIndex = functionIndices[function_id]
                 except KeyError:
-                    function = Function(function_id, function_name)
-                    function.module = os.path.basename(str(symbol.module))
-                    function[SAMPLES] = 0
-                    profile.add_function(function)
-                callchain.append(function)
+                    function_name = str(symbol)
+                    function = {
+                        'name': function_name,
+                        'module': os.path.basename(str(symbol.module))
+                    }
+                    functionIndex = len(functions)
+                    functionIndices[function_id] = functionIndex
+                    functions.append(function)
+                callchain.append(functionIndex)
 
-            callee = callchain[0]
-            callee[SAMPLES] += alloc.size
-            profile[SAMPLES] += alloc.size
+            event = {
+                'callchain': callchain,
+                'cost': [alloc.size],
+            }
+            events.append(event)
 
-            for caller in callchain[1:]:
-                try:
-                    call = caller.calls[callee.id]
-                except KeyError:
-                    call = Call(callee.id)
-                    call[SAMPLES2] = alloc.size
-                    caller.add_call(call)
-                else:
-                    call[SAMPLES2] += alloc.size
+        profile = {
+            'version': 0,
+            'costs': costs,
+            'functions': functions,
+            'events': events,
+        }
 
-                callee = caller
+        stream = open(filename, 'wt')
+        if True:
+            json.dump(profile, stream, indent=2, sort_keys=True)
+        else:
+            json.dump(profile, stream)
+        stream.write('\n')
 
-        # compute derived data
-        profile.validate()
-        profile.find_cycles()
-        profile.ratio(TIME_RATIO, SAMPLES)
-        profile.call_ratios(SAMPLES2)
-        profile.integrate(TOTAL_TIME_RATIO, TIME_RATIO)
-
-        from gprof2dot import DotWriter, TEMPERATURE_COLORMAP
-
-        writer = DotWriter(open(filename, 'wt'))
-        writer.strip = True
-        writer.wrap = True
-        profile.prune(threshold, threshold)
-        writer.graph(profile, TEMPERATURE_COLORMAP)
-        
         sys.stdout.write('%s written\n' % filename)
 
 
@@ -614,7 +610,7 @@ class Reporter(Parser):
             tree = heap.tree()
             tree.write(sys.stdout, threshold = threshold)
             sys.stdout.write('\n')
-            heap.graph('memtrail.%s.dot' % label, threshold = threshold)
+            heap.graph('memtrail.%s.json' % label, threshold = threshold)
             sys.stdout.write('\n')
 
 

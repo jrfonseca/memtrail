@@ -1,6 +1,7 @@
 .*.sw?
 *.data
 *.dot
+*.json
 *.o
 *.out
 *.pyc
