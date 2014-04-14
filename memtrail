@@ -317,9 +317,7 @@ class Heap:
                 parent = child
         return root
 
-    def graph(self, filename, threshold = default_threshold):
-
-
+    def write_profile(self, filename):
         costs = [
             {
                 'description': 'Memory',
@@ -530,10 +528,6 @@ class Parser:
         data = self.log.read(size)
         return struct.unpack(fmt, data)
 
-    def readline(self):
-        line = self.log.readline()
-        return self.stamp, line
-
 
 class Reporter(Parser):
 
@@ -610,7 +604,7 @@ class Reporter(Parser):
             tree = heap.tree()
             tree.write(sys.stdout, threshold = threshold)
             sys.stdout.write('\n')
-            heap.graph('memtrail.%s.json' % label, threshold = threshold)
+            heap.write_profile('memtrail.%s.json' % label)
             sys.stdout.write('\n')
 
 
@@ -619,10 +613,6 @@ def report(args):
 
     optparser = OptionParser(
         usage="\n\t%prog report [options]")
-    optparser.add_option(
-        '-g', '--graph', metavar='DOT',
-        type="string", dest="graph",
-        help="output dot graph]")
     optparser.add_option(
         '-i', '--include-function', metavar='PATTERN',
         type="string",
