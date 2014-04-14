@@ -328,7 +328,7 @@ class Heap:
         functions = []
         functionIndices = {}
 
-        events = []
+        callchains = {}
 
         for alloc in self.allocs.itervalues():
             callchain = []
@@ -348,9 +348,18 @@ class Heap:
                     functions.append(function)
                 callchain.append(functionIndex)
 
+            callchain = tuple(callchain)
+
+            try:
+                callchains[callchain] += alloc.size
+            except KeyError:
+                callchains[callchain] = alloc.size
+
+        events = []
+        for callchain, size in callchains.iteritems():
             event = {
-                'callchain': callchain,
-                'cost': [alloc.size],
+                'callchain': list(callchain),
+                'cost': [size],
             }
             events.append(event)
 
