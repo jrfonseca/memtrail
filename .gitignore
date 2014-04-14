@@ -7,4 +7,5 @@
 *.pyc
 *.so
 gprof2dot.py
+benchmark
 sample

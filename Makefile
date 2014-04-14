@@ -11,7 +11,7 @@ gprof2dot.py:
 	wget --quiet --timestamping http://gprof2dot.jrfonseca.googlecode.com/git/gprof2dot.py
 	chmod +x gprof2dot.py
 
-sample: sample.cpp
+%: %.cpp
 	$(CXX) -O0 -g2 -o $@ $< -ldl
 
 pre-test: libmemtrail.so memtrail.sym
@@ -27,8 +27,12 @@ test: pre-test sample gprof2dot.py
 test-debug: libmemtrail.so sample
 	./memtrail record --debug ./sample
 
+bench: benchmark
+	./memtrail record ./benchmark
+	./memtrail report
+
 clean:
 	rm -f libmemtrail.so gprof2dot.py sample
 
 
-.PHONY: all pre-test test test-debug clean
+.PHONY: all pre-test test test-debug bench clean
