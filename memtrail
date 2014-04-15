@@ -454,10 +454,12 @@ class Parser:
         if magic == '\037\213':
             # gzip file
             del self.log
-            self.log = GzipFile(log, 'rb')
+            gzip = subprocess.Popen(['gzip', '-dc', log], stdout=subprocess.PIPE)
+            self.log = gzip.stdout
         else:
             # raw data
             self.log.seek(0, 0)
+            self.log.seek(0, os.SEEK_SET)
         
         self.stamp = 0
 
