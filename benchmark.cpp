@@ -28,15 +28,18 @@
 #include <stdio.h>
 
 
-static const size_t count = 128*1024;
-static const size_t size = 8;
+size_t count = 256*1024;
+size_t size = 4;
 
 
 static void
 fn0(void)
 {
    for (size_t i = 0; i < count; ++i) {
-      malloc(size);
+      void * ptr = malloc(size);
+      if (i % 2) {
+         free(ptr);
+      }
    }
 }
 
@@ -65,6 +68,13 @@ fn3(void)
 int
 main(int argc, char *argv[])
 {
+   if (argc > 1) {
+      count = atol(argv[1]);
+      if (argc > 2) {
+         size = atol(argv[2]);
+      }
+   }
+
    fn3();
 
    printf("Should leak %zu bytes...\n", count * size);

@@ -21,18 +21,23 @@ test: pre-test sample gprof2dot.py
 	./memtrail record ./sample
 	./memtrail dump
 	./memtrail report
-	gprof2dot.py -f json memtrail.maximum.json > memtrail.maximum.dot
-	gprof2dot.py -f json memtrail.leaked.json > memtrail.leaked.dot
+	./gprof2dot.py -f json memtrail.maximum.json > memtrail.maximum.dot
+	./gprof2dot.py -f json memtrail.leaked.json > memtrail.leaked.dot
 
 test-debug: libmemtrail.so sample
 	./memtrail record --debug ./sample
 
-bench: benchmark
+bench: libmemtrail.so benchmark
 	./memtrail record ./benchmark
-	./memtrail report
+	time -p ./memtrail report
+
+profile: benchmark gprof2dot.py
+	./memtrail record ./benchmark
+	python -m cProfile -o memtrail.pstats -- ./memtrail report
+	./gprof2dot.py -f pstats memtrail.pstats > memtrail.dot
 
 clean:
 	rm -f libmemtrail.so gprof2dot.py sample
 
 
-.PHONY: all pre-test test test-debug bench clean
+.PHONY: all pre-test test test-debug bench profile clean
