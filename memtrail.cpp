@@ -297,9 +297,6 @@ _update(const void *ptr, ssize_t size) {
    static int recursion = 0;
 
    if (recursion++ <= 0) {
-      void *addrs[MAX_STACK];
-      size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
-
       total_size += size;
 
       if (total_size > max_size) {
@@ -313,13 +310,17 @@ _update(const void *ptr, ssize_t size) {
       buf.write(&ptr, sizeof ptr);
       buf.write(&size, sizeof size);
 
+      if (size > 0) {
+         void *addrs[MAX_STACK];
+         size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
 
-      unsigned char c = (unsigned char) count;
-      buf.write(&c, 1);
+         unsigned char c = (unsigned char) count;
+         buf.write(&c, 1);
 
-      for (size_t i = 0; i < count; ++i) {
-         void *addr = addrs[i];
-         _lookup(buf, addr);
+         for (size_t i = 0; i < count; ++i) {
+            void *addr = addrs[i];
+            _lookup(buf, addr);
+         }
       }
    } else {
        //fprintf(stderr, "memtrail: warning: recursion\n");

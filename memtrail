@@ -486,7 +486,10 @@ class Parser:
         addr, ssize = self.read('Pl')
         #print '0x%08x %i' % (addr, ssize)
 
-        frames = self.parse_frames()
+        if ssize > 0:
+            frames = self.parse_frames()
+        else:
+            frames = []
 
         self.handle_event(stamp, addr, ssize, frames)
 
