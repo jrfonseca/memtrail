@@ -25,7 +25,6 @@
 ##########################################################################/
 
 
-import gzip
 import json
 import optparse
 import os.path
@@ -36,16 +35,6 @@ import subprocess
 import sys
 import time
 
-
-
-class GzipFile(gzip.GzipFile):
-
-    def _read_eof(self):
-        # Ignore incomplete files
-        try:
-            gzip.GzipFile._read_eof(self)
-        except IOError:
-            pass
 
 
 class OptionParser(optparse.OptionParser):
