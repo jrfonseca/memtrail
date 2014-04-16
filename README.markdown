@@ -1,7 +1,7 @@
 About
 =====
 
-**memtrail** is a `LD_PRELOAD` based memory debugger/profiler for Linux.
+**memtrail** is a `LD_PRELOAD` based memory profiler and leak detector for Linux.
 
 There are already many other open-source memory debugging/profiling tools for
 Linux, several of which are listed on Links section below, and the most
