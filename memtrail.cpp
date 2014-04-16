@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2011 Jose Fonseca
+ * Copyright 2011-201 Jose Fonseca
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -93,7 +93,7 @@ struct Module {
 };
 
 static Module modules[MAX_MODULES];
-unsigned numModules = 0;
+static unsigned numModules = 0;
 
 struct Symbol {
    void *addr;
@@ -202,10 +202,11 @@ _lookup(PipeBuf &buf, void *addr) {
    }
 }
 
-enum PIPE_FILE_DESCRIPTERS
+
+enum
 {
-  READ_FD  = 0,
-  WRITE_FD = 1
+   READ_FD  = 0,
+   WRITE_FD = 1
 };
 
 
@@ -531,6 +532,7 @@ vasprintf(char **strp, const char *fmt, va_list ap)
    return vsnprintf(*strp, size, fmt, ap);
 }
 
+
 extern "C"
 PUBLIC int
 asprintf(char **strp, const char *format, ...)
@@ -599,7 +601,6 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
 /*
  * Constructor/destructor
  */
-
 
 
 __attribute__ ((constructor(101)))
