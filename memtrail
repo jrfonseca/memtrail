@@ -435,6 +435,14 @@ class Filter:
         return self.default
 
 
+def ReadMethod(fmt):
+    # Generate a read_xxx method, precomputing the format size
+    size = struct.calcsize(fmt)
+    def read_fmt(self):
+        return struct.unpack(fmt, self.read(size))
+    return read_fmt
+
+
 class Parser:
 
     def __init__(self, log):
@@ -457,7 +465,7 @@ class Parser:
 
     def parse(self):
         # TODO
-        addrsize = self.read('B')
+        addrsize = self.read_byte()
 
         try:
             while True:
@@ -474,7 +482,7 @@ class Parser:
         self.stamp += 1
         stamp = self.stamp
 
-        addr, ssize = self.read('Pl')
+        addr, ssize = self.read_event()
         #print '0x%08x %i' % (addr, ssize)
 
         if ssize > 0:
@@ -487,19 +495,19 @@ class Parser:
         return True
 
     def parse_frames(self):
-        count, = self.read('B')
+        count, = self.read_byte()
 
         frames = []
         START, MEMTRAIL, USER = range(3)
         layer = START
         for i in range(count):
-            addr, offset, moduleNo = self.read('PPB')
+            addr, offset, moduleNo = self.read_frame()
 
             try:
                 module = self.modules[moduleNo]
             except KeyError:
-                length, = self.read('P')
-                module = self.log.read(length)
+                length, = self.read_pointer()
+                module = self.read(length)
                 self.modules[moduleNo] = module
 
             #print Symbol(addr, module, offset)
@@ -526,10 +534,14 @@ class Parser:
     def handle_event(self, stamp, addr, ssize, frames):
         pass
 
-    def read(self, fmt):
-        size = struct.calcsize(fmt)
+    def read(self, size):
         data = self.log.read(size)
-        return struct.unpack(fmt, data)
+        return data
+
+    read_byte = ReadMethod('B')
+    read_event = ReadMethod('Pl')
+    read_pointer = ReadMethod('P')
+    read_frame = ReadMethod('PPB')
 
 
 class Reporter(Parser):
