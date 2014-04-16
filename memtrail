@@ -450,14 +450,19 @@ class Parser:
         magic = self.log.read(2)
         if magic == '\037\213':
             # gzip file
+            self.log.seek(-4, os.SEEK_END)
+            self.log_size, = struct.unpack('I', self.log.read(4))
             del self.log
             gzip = subprocess.Popen(['gzip', '-dc', log], stdout=subprocess.PIPE)
             self.log = gzip.stdout
         else:
             # raw data
-            self.log.seek(0, 0)
+            self.log.seek(0, os.SEEK_END)
+            self.log_size = self.log.tell()
+            assert self.log_size == os.path.getsize(log)
             self.log.seek(0, os.SEEK_SET)
-        
+        self.log_pos = 0
+
         self.stamp = 0
 
         self.modules = {}
@@ -534,8 +539,12 @@ class Parser:
     def handle_event(self, stamp, addr, ssize, frames):
         pass
 
+    def progress(self):
+        return self.log_pos*100/self.log_size
+
     def read(self, size):
         data = self.log.read(size)
+        self.log_pos += len(data)
         return data
 
     read_byte = ReadMethod('B')
@@ -594,9 +603,10 @@ class Reporter(Parser):
         if self.counter:
             assert stamp >= self.last_stamp
             if stamp >= self.last_stamp + self.interval:
+                progress = self.progress()
                 kb = (self.heap.size + 1024 - 1)/1024
                 #sys.stdout.write('%8d KB  %s\n' % (kb, '.' * (kb/16)))
-                sys.stdout.write('%8d KB\n' % (kb,))
+                sys.stdout.write('%3d%% %8d KB\n' % (progress, kb))
                 sys.stdout.flush()
                 self.last_stamp = stamp
         else:
