@@ -132,7 +132,8 @@ public:
       if (_written) {
          ssize_t ret;
          ret = ::write(_fd, _buf, _written);
-         assert(ret >= 0 && (size_t)ret == _written);
+         assert(ret >= 0);
+         assert((size_t)ret == _written);
          _written = 0;
       }
    }
@@ -275,7 +276,8 @@ _open(void) {
       unsigned char c = sizeof(void *);
       ssize_t ret;
       ret = ::write(fd, &c, sizeof c);
-      assert(ret >= 0 && (size_t)ret == sizeof c);
+      assert(ret >= 0);
+      assert((size_t)ret == sizeof c);
    }
 }
 
