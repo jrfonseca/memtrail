@@ -10,6 +10,18 @@ leaks and identify memory hogs, for long-running and CPU intensive workloads,
 which simply run too slow under Valgrind's dynamic binary instrumentation,
 hence this project.
 
+Features
+--------
+
+* Very little runtime overhead
+
+* Will immediately output maxmimum memory allocated and total leaked memory at
+  the end of program execution.
+
+* Text trees show callstacks for memory consuption or leaks
+
+* Can produce graphs showing flow of memory consumption or leaks
+
 
 Requirements
 ============
