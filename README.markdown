@@ -47,49 +47,57 @@ View results with
 It will produce something like
 
 
-    leaked: 5217 bytes
+    maximum: 5890 bytes
     
-    ->39.26% (2048B): test_calloc
-    | ->39.26% (2048B): main
-    |   ->39.26% (2048B): __libc_start_main
-    |     ->39.26% (2048B): _start
+    ->34.77% (2048B): test_calloc
+    | ->34.77% (2048B): main
+    |   ->34.77% (2048B): __libc_start_main
+    |     ->34.77% (2048B): _start
     | 
-    ->19.63% (1024B): test_malloc
-    | ->19.63% (1024B): main
-    |   ->19.63% (1024B): __libc_start_main
-    |     ->19.63% (1024B): _start
+    ->17.39% (1024B): test_memalign
+    | ->17.39% (1024B): main
+    |   ->17.39% (1024B): __libc_start_main
+    |     ->17.39% (1024B): _start
     | 
-    ->19.63% (1024B): test_memalign
-    | ->19.63% (1024B): main
-    |   ->19.63% (1024B): __libc_start_main
-    |     ->19.63% (1024B): _start
+    ->17.39% (1024B): test_malloc
+    | ->17.39% (1024B): main
+    |   ->17.39% (1024B): __libc_start_main
+    |     ->17.39% (1024B): _start
     | 
-    -> 9.81% (512B): test_cxx
-    | -> 9.81% (512B): main
-    |   -> 9.81% (512B): __libc_start_main
-    |     -> 9.81% (512B): _start
+    -> 8.69% (512B): TestGlobal::TestGlobal()
+    | -> 8.69% (512B): __static_initialization_and_destruction_0
+    |   -> 8.69% (512B): _GLOBAL__sub_I_leaked
+    |     -> 8.69% (512B): __libc_csu_init
+    |       -> 8.69% (512B): __libc_start_main
+    |         -> 8.69% (512B): _start
     | 
-    -> 9.81% (512B): TestGlobal::TestGlobal()
-    | -> 9.81% (512B): __static_initialization_and_destruction_0
-    |   -> 9.81% (512B): _GLOBAL__sub_I_leaked
-    |     -> 9.81% (512B): __libc_csu_init
-    |       -> 9.81% (512B): __libc_start_main
-    |         -> 9.81% (512B): _start
+    -> 8.69% (512B): test_cxx
+    | -> 8.69% (512B): main
+    |   -> 8.69% (512B): __libc_start_main
+    |     -> 8.69% (512B): _start
     | 
-    -> 1.23% (64B): TestGlobal::~TestGlobal()
-    | -> 1.23% (64B): __run_exit_handlers
-    |   -> 1.23% (64B): exit
-    |     -> 1.23% (64B): __libc_start_main
-    |       -> 1.23% (64B): _start
+    -> 8.69% (512B): test_cxx
+    | -> 8.69% (512B): main
+    |   -> 8.69% (512B): __libc_start_main
+    |     -> 8.69% (512B): _start
     | 
-    -> 0.61% (32B) in 2 places, all below the 1.00% threshold
+    -> 4.35% (256B): TestGlobal::TestGlobal()
+    | -> 4.35% (256B): __static_initialization_and_destruction_0
+    |   -> 4.35% (256B): _GLOBAL__sub_I_leaked
+    |     -> 4.35% (256B): __libc_csu_init
+    |       -> 4.35% (256B): __libc_start_main
+    |         -> 4.35% (256B): _start
+    | 
+    -> 0.02% (1B) in 2 places, all below the 1.00% threshold
     
-    memtrail.leaked.json written
+    memtrail.maximum.json written
 
 You can then use `gprof2dot.py` to obtain graphs highlighting memory leaks or
 consumption:
 
-    gprof2dot.py -f json memtrail.leaked.json | dot -Tpng -o memtrail.leaked.png
+    gprof2dot.py -f json memtrail.maximum.json | dot -Tpng -o memtrail.maximum.png
+
+![Sample](sample.png)
 
 
 Known Issues
