@@ -1,8 +1,6 @@
 About
 =====
 
-THIS IS WORK IN PROGRESS AND IS NOT READY FOR GENERAL CONSUMPTION.
-
 **memtrail** is a `LD_PRELOAD` based memory debugger/profiler for Linux.
 
 There are already many other open-source memory debugging/profiling tools for
@@ -17,6 +15,8 @@ Requirements
 ============
 
 * Linux
+
+* Python 2.7
 
 * gzip
 
@@ -42,6 +42,61 @@ directory.
 View results with
 
     memtrail report
+
+
+It will produce something like
+
+
+    leaked: 5217 bytes
+    
+    ->39.26% (2048B): test_calloc
+    | ->39.26% (2048B): main
+    |   ->39.26% (2048B): __libc_start_main
+    |     ->39.26% (2048B): _start
+    | 
+    ->19.63% (1024B): test_malloc
+    | ->19.63% (1024B): main
+    |   ->19.63% (1024B): __libc_start_main
+    |     ->19.63% (1024B): _start
+    | 
+    ->19.63% (1024B): test_memalign
+    | ->19.63% (1024B): main
+    |   ->19.63% (1024B): __libc_start_main
+    |     ->19.63% (1024B): _start
+    | 
+    -> 9.81% (512B): test_cxx
+    | -> 9.81% (512B): main
+    |   -> 9.81% (512B): __libc_start_main
+    |     -> 9.81% (512B): _start
+    | 
+    -> 9.81% (512B): TestGlobal::TestGlobal()
+    | -> 9.81% (512B): __static_initialization_and_destruction_0
+    |   -> 9.81% (512B): _GLOBAL__sub_I_leaked
+    |     -> 9.81% (512B): __libc_csu_init
+    |       -> 9.81% (512B): __libc_start_main
+    |         -> 9.81% (512B): _start
+    | 
+    -> 1.23% (64B): TestGlobal::~TestGlobal()
+    | -> 1.23% (64B): __run_exit_handlers
+    |   -> 1.23% (64B): exit
+    |     -> 1.23% (64B): __libc_start_main
+    |       -> 1.23% (64B): _start
+    | 
+    -> 0.61% (32B) in 2 places, all below the 1.00% threshold
+    
+    memtrail.leaked.json written
+
+You can then use `gprof2dot.py` to obtain graphs highlighting memory leaks or
+consumption:
+
+    gprof2dot.py -f json memtrail.leaked.json | dot -Tpng -o memtrail.leaked.png
+
+
+Known Issues
+============
+
+* Computing the maximum memory allocation is awfully inefficient.  Use the
+  `--no-maximum` option if you are only interested in memory leaks.
 
 
 Links

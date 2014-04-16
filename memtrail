@@ -668,7 +668,7 @@ def report(args):
         type="float", dest="threshold", default = default_threshold*100.0,
         help="eliminate nodes below this threshold [default: %default]")
     optparser.add_option(
-        '--no_maximum',
+        '--no-maximum',
         action="store_false",
         dest="maximum", default=True,
         help="skip maximum detection (speeds ups reporting tremendously)")
