@@ -146,6 +146,39 @@ test_subprocess(void)
 }
 
 
+class TestGlobal
+{
+public:
+   void *p;
+
+   TestGlobal() {
+      malloc(512);
+      leaked += 512;
+
+      p = malloc(256);
+   }
+
+   ~TestGlobal() {
+      free(p);
+
+      malloc(64);
+      leaked += 64;
+
+      printf("Should leak %zu bytes...\n", leaked);
+   }
+};
+
+static TestGlobal test_global;
+
+
+static void
+test_atexit(void)
+{
+   malloc(32);
+   leaked += 32;
+}
+
+
 int
 main(int argc, char *argv[])
 {
@@ -157,7 +190,7 @@ main(int argc, char *argv[])
    test_string();
    test_subprocess();
 
-   printf("Should leak %zu bytes...\n", leaked);
+   atexit(test_atexit);
 
    return 0;
 }

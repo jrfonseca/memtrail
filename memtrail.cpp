@@ -282,14 +282,6 @@ _open(void) {
 }
 
 
-static void
-_close() {
-   if (fd >= 0) {
-      close(fd);
-   }
-}
-
-
 /**
  * Update/log changes to memory allocations.
  */
@@ -608,24 +600,29 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
  * Constructor/destructor
  */
 
-class Main
+
+
+__attribute__ ((constructor(101)))
+static void
+on_start(void)
 {
-public:
-   Main() {
-      // Only trace the current process.
-      unsetenv("LD_PRELOAD");
-      _open();
-   }
 
-   ~Main() {
-      _close();
-      fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
-      fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
-   }
-};
+   // Only trace the current process.
+   unsetenv("LD_PRELOAD");
+   _open();
+}
 
 
-static Main _main;
+__attribute__ ((destructor(101)))
+static void
+on_exit(void)
+{
+    fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
+    fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
+
+    // We don't close the fd here, just in case another destructor that deals
+    // with memory gets called after us.
+}
 
 
 // vim:set sw=3 ts=3 et:
