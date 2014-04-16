@@ -251,7 +251,7 @@ class TreeNode:
                     absolute_cost = child.cost
                     nr_pruned += 1
                 relative_cost = float(pruned_cost) / float(total_cost)
-                stream.write('%s->%5.2f%% (%uB) in %u places, all below the %5.2f%% threshold\n' % (indent, 100.0 * relative_cost, pruned_cost, nr_pruned, threshold))
+                stream.write('%s->%5.2f%% (%uB) in %u places, all below the %.2f%% threshold\n' % (indent, 100.0 * relative_cost, pruned_cost, nr_pruned, 100.0 * threshold))
                 break
 
             relative_cost = float(child.cost) / float(total_cost)
