@@ -29,7 +29,7 @@ test-debug: libmemtrail.so sample
 
 bench: libmemtrail.so benchmark
 	./memtrail record ./benchmark
-	time -p ./memtrail report
+	time -p ./memtrail report --no_maximum
 
 profile: benchmark gprof2dot.py
 	./memtrail record ./benchmark

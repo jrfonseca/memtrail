@@ -555,9 +555,10 @@ class Parser:
 
 class Reporter(Parser):
 
-    def __init__(self, log, filter):
+    def __init__(self, log, filter, search_maximum = True):
         Parser.__init__(self, log)
         self.heap = Heap()
+        self.search_maximum = search_maximum
         self.max_heap = self.heap
         self.max_stamp = 0
         self.filter = filter
@@ -570,14 +571,14 @@ class Reporter(Parser):
             else:
                 return True
         else:
-            if self.heap is self.max_heap:
+            if self.search_maximum and self.heap is self.max_heap:
                 self.max_heap = self.heap.copy()
             try:
                 old_alloc = self.pop_alloc(addr)
             except KeyError:
                 return True
 
-        if self.heap.size > self.max_heap.size:
+        if self.search_maximum and self.heap.size > self.max_heap.size:
             self.max_heap = self.heap
             self.max_stamp = stamp
 
@@ -666,6 +667,11 @@ def report(args):
         '-t', '--threshold', metavar='PERCENTAGE',
         type="float", dest="threshold", default = default_threshold*100.0,
         help="eliminate nodes below this threshold [default: %default]")
+    optparser.add_option(
+        '--no_maximum',
+        action="store_false",
+        dest="maximum", default=True,
+        help="skip maximum detection (speeds ups reporting tremendously)")
     (options, args) = optparser.parse_args(args)
 
     if args:
@@ -682,10 +688,11 @@ def report(args):
 
     threshold = options.threshold / 100.0
 
-    reporter = Reporter(input, filter)
+    reporter = Reporter(input, filter, options.maximum)
     reporter.parse()
 
-    reporter.report_heap('maximum', reporter.max_heap, threshold)
+    if options.maximum:
+        reporter.report_heap('maximum', reporter.max_heap, threshold)
     reporter.report_heap('leaked', reporter.heap, threshold)
 
 
