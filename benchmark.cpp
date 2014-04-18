@@ -24,60 +24,83 @@
  **************************************************************************/
 
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 
-size_t count = 256*1024;
-size_t size = 4;
+static size_t numAllocations = 256*1024;
+static size_t allocationSize = 4;
+static size_t leaked = 0;
 
+#define NUM_FUNCTIONS 4
 
-static void
-fn0(void)
-{
-   for (size_t i = 0; i < count; ++i) {
-      void * ptr = malloc(size);
-      if (i % 2) {
-         free(ptr);
-      }
+typedef void (*FunctionPointer)(const unsigned *i, unsigned n, bool b);
+
+extern const FunctionPointer functionPointerss[NUM_FUNCTIONS];
+
+#define FUNCTION(_index) \
+   static void \
+   fn##_index(const unsigned *indices, unsigned depth, bool leak) { \
+      if (depth == 0) { \
+         void * ptr = malloc(allocationSize); \
+         if (!leak) { \
+            free(ptr); \
+         } else { \
+            leaked += allocationSize; \
+         } \
+      } else { \
+         --depth; \
+         functionPointerss[indices[depth]](indices, depth, leak); \
+      } \
    }
-}
+
+FUNCTION(0)
+FUNCTION(1)
+FUNCTION(2)
+FUNCTION(3)
 
 
-static void
-fn1(void)
-{
-   fn0();
-}
+const FunctionPointer functionPointerss[NUM_FUNCTIONS] = {
+   fn0,
+   fn1,
+   fn2,
+   fn3
+};
 
 
-static void
-fn2(void)
-{
-   fn1();
-}
-
-
-static void
-fn3(void)
-{
-   fn2();
-}
+#define MAX_DEPTH 8
 
 
 int
 main(int argc, char *argv[])
 {
    if (argc > 1) {
-      count = atol(argv[1]);
+      numAllocations = atol(argv[1]);
       if (argc > 2) {
-         size = atol(argv[2]);
+         allocationSize = atol(argv[2]);
       }
    }
 
-   fn3();
+   bool leak = false;
+   for (unsigned i = 0; i < numAllocations; ++i) {
+      unsigned indices[MAX_DEPTH];
+      for (unsigned depth = 0; depth < MAX_DEPTH; ++depth) {
+         // Random number, with non-uniform distribution
+         unsigned index = rand() & 0xffff;
+         index = (index * index) >> 16;
+         index = (index * NUM_FUNCTIONS) >> 16;
+         assert(index >= 0);
+         assert(index < NUM_FUNCTIONS);
 
-   printf("Should leak %zu bytes...\n", count * size);
+         indices[depth] = index;
+      }
+
+      leak = !leak;
+      functionPointerss[indices[MAX_DEPTH - 1]](indices, MAX_DEPTH - 1, leak);
+   }
+
+   printf("Should leak %zu bytes...\n", leaked);
 
    return 0;
 }
