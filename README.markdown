@@ -112,13 +112,6 @@ consumption:
 ![Sample](sample.png)
 
 
-Known Issues
-============
-
-* Computing the maximum memory allocation is awfully inefficient.  Use the
-  `--no-maximum` option if you are only interested in memory leaks.
-
-
 Links
 =====
 

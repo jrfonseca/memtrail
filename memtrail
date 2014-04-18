@@ -110,14 +110,6 @@ def record(args):
 # report
 
 
-class Context:
-
-    def __init__(self, stamp, thread = 0, frames = ()):
-        self.stamp = stamp
-        self.thread = thread
-        self.frames = frames
-
-
 def _ignore_sigint():
     # Prevent subprocesses from receiving ctrl-c
     # http://stackoverflow.com/questions/5045771/python-how-to-prevent-subprocesses-from-receiving-ctrl-c-control-c-sigint
@@ -170,23 +162,28 @@ class Module:
         return function, line
 
 
-class Symbol:
+class Symbol(object):
 
-    modules = {}
+    moduleCache = {}
 
+    __slots__ = [
+        'addr',
+        'module',
+        'offset',
+        '_function',
+    ]
 
-    def __init__(self, addr, module, offset):
+    def __init__(self, addr, modulePath, offset):
         self.addr = addr
         
         try:
-            self.module = Symbol.modules[module]
+            self.module = Symbol.moduleCache[modulePath]
         except KeyError:
-            self.module = Module(module)
-            Symbol.modules[module] = self.module
+            self.module = Module(modulePath)
+            Symbol.moduleCache[modulePath] = self.module
 
         self.offset = offset
         self._function = None
-
 
     def function(self):
         if self._function is None:
@@ -211,17 +208,39 @@ class Symbol:
             return '%s+0x%x' % (self.module, self.offset)
 
 
-class Allocation:
+class SymbolTable:
 
-    def __init__(self, no, address, size, parent = None, context=None):
-        self.no = no
+    def __init__(self):
+        self.symbols = {}
+
+    def addSymbol(self, address, modulePath, offset):
+        try:
+            symbol = self.symbols[address]
+        except KeyError:
+            self.symbols[address] = Symbol(address, modulePath, offset)
+        else:
+            assert modulePath == symbol.module.path
+            assert offset == symbol.offset
+
+    def getSymbol(self, address):
+        return self.symbols[address]
+
+
+class Allocation(object):
+
+    __slots__ = [
+        'address',
+        'size',
+        'frames',
+    ]
+
+    def __init__(self, address, size, frames):
         self.address = address
         self.size = size
-        self.parent = parent
-        self.context = context
+        self.frames = frames
 
     def __str__(self):
-        return 'alloc #%u, address 0x%X, size = %%u' % (self.no, self.address, self.size)
+        return '0x%X+%%u' % (self.address, self.size)
 
 
 default_threshold = 0.01
@@ -270,43 +289,48 @@ class TreeNode:
 class Heap:
 
     def __init__(self):
-        self.allocs = {}
+        self.framesSizes = {}
         self.size = 0
 
     def add(self, alloc):
-        assert alloc.no not in self.allocs
-        self.allocs[alloc.no] = alloc
-        self.size += alloc.size
+        self._update(alloc.size, alloc.frames)
 
-    def pop(self, alloc_no):
-        alloc = self.allocs.pop(alloc_no)
-        assert self.size >= alloc.size
-        self.size -= alloc.size
-        return alloc
-    
-    def copy(self):
-        heap = Heap()
-        heap.allocs = self.allocs.copy()
-        heap.size = self.size
-        return heap
+    def pop(self, alloc):
+        self._update(-alloc.size, alloc.frames)
 
-    def tree(self):
+    def _update(self, ssize, frames):
+        assert frames
+        try:
+            self.framesSizes[frames] += ssize
+        except KeyError:
+            self.framesSizes[frames] = ssize
+        self.size += ssize
+
+    def merge(self, other):
+        for frames, size in other.framesSizes.iteritems():
+            self._update(size, frames)
+
+    def tree(self, symbolTable):
         root = TreeNode()
-        for alloc in self.allocs.itervalues():
-            frames = alloc.context.frames
-            root.cost += alloc.size
+        for frames, size in self.framesSizes.iteritems():
+            assert size >= 0
+            if size == 0:
+                continue
+            root.cost += size
             parent = root
-            for frame in frames:
+            for address in frames:
+                symbol = symbolTable.getSymbol(address)
+                function_id = symbol.id()
                 try:
-                    child = parent.children[frame]
+                    child = parent.children[function_id]
                 except KeyError:
-                    child = TreeNode(frame)
-                    parent.children[frame] = child
-                child.cost += alloc.size
+                    child = TreeNode(symbol)
+                    parent.children[function_id] = child
+                child.cost += size
                 parent = child
         return root
 
-    def write_profile(self, filename):
+    def write_profile(self, symbolTable, filename):
         costs = [
             {
                 'description': 'Memory',
@@ -319,10 +343,15 @@ class Heap:
 
         callchains = {}
 
-        for alloc in self.allocs.itervalues():
+        for frames, size in self.framesSizes.iteritems():
+            assert size >= 0
+            if size == 0:
+                continue
+
             callchain = []
 
-            for symbol in alloc.context.frames:
+            for address in frames:
+                symbol = symbolTable.getSymbol(address)
                 function_id = symbol.id()
                 try:
                     functionIndex = functionIndices[function_id]
@@ -340,9 +369,9 @@ class Heap:
             callchain = tuple(callchain)
 
             try:
-                callchains[callchain] += alloc.size
+                callchains[callchain] += size
             except KeyError:
-                callchains[callchain] = alloc.size
+                callchains[callchain] = size
 
         events = []
         for callchain, size in callchains.iteritems():
@@ -410,8 +439,7 @@ class Filter:
             return None
 
     def filter(self, alloc):
-        context = alloc.context
-        for symbol in context.frames:
+        for symbol in alloc.frames:
             if self.include_function_re is not None or self.exclude_function_re is not None:
                 function = symbol.function()
                 if self.include_function_re is not None:
@@ -465,8 +493,8 @@ class Parser:
 
         self.stamp = 0
 
-        self.modules = {}
-        self.symbols = {}
+        self.modulePaths = {}
+        self.symbolTable = SymbolTable()
 
     def parse(self):
         # TODO
@@ -488,12 +516,11 @@ class Parser:
         stamp = self.stamp
 
         addr, ssize = self.read_event()
-        #print '0x%08x %i' % (addr, ssize)
 
         if ssize > 0:
             frames = self.parse_frames()
         else:
-            frames = []
+            frames = ()
 
         self.handle_event(stamp, addr, ssize, frames)
 
@@ -509,32 +536,25 @@ class Parser:
             addr, offset, moduleNo = self.read_frame()
 
             try:
-                module = self.modules[moduleNo]
+                modulePath = self.modulePaths[moduleNo]
             except KeyError:
                 length, = self.read_pointer()
-                module = self.read(length)
-                self.modules[moduleNo] = module
+                modulePath = self.read(length)
+                self.modulePaths[moduleNo] = modulePath
 
-            #print Symbol(addr, module, offset)
             if layer < USER:
-                if module.endswith('libmemtrail.so'):
+                if modulePath.endswith('libmemtrail.so'):
                     if layer == START:
                         layer = MEMTRAIL
                 else:
                     if layer == MEMTRAIL:
                         layer = USER
-            #print '0x%08x %r +0x%08x' % (addr, module, offset)
             if layer == USER:
-                try:
-                    symbol = self.symbols[addr]
-                except KeyError:
-                    symbol = Symbol(addr, module, offset)
-                    self.symbols[addr] = symbol
-
-                frames.append(symbol)
+                self.symbolTable.addSymbol(addr, modulePath, offset)
+                frames.append(addr)
 
         assert frames
-        return frames
+        return tuple(frames)
     
     def handle_event(self, stamp, addr, ssize, frames):
         pass
@@ -557,43 +577,42 @@ class Reporter(Parser):
 
     def __init__(self, log, filter, search_maximum = True):
         Parser.__init__(self, log)
-        self.heap = Heap()
+        self.allocs = {}
+        self.size = 0
         self.search_maximum = search_maximum
-        self.max_heap = self.heap
+        self.max_heap = Heap()
+        self.delta_heap = Heap()
         self.max_stamp = 0
         self.filter = filter
 
     def handle_event(self, stamp, addr, ssize, frames):
         if ssize > 0:
-            alloc = self.create_alloc(addr, ssize, frames)
+            alloc = Allocation(addr, ssize, frames)
             if self.filter.filter(alloc):
-                self.heap.add(alloc)
+                assert alloc.address not in self.allocs
+                self.allocs[alloc.address] = alloc
+                self.size += alloc.size
+                self.delta_heap.add(alloc)
             else:
                 return True
-        else:
-            if self.search_maximum and self.heap is self.max_heap:
-                self.max_heap = self.heap.copy()
-            try:
-                old_alloc = self.pop_alloc(addr)
-            except KeyError:
-                return True
 
-        if self.search_maximum and self.heap.size > self.max_heap.size:
-            self.max_heap = self.heap
-            self.max_stamp = stamp
+            if self.search_maximum and self.size > self.max_heap.size:
+                self.max_stamp = stamp
+        else:
+            try:
+                alloc = self.allocs.pop(addr)
+            except KeyError:
+                return
+
+            if self.search_maximum and self.size > self.max_heap.size:
+                self.max_heap.merge(self.delta_heap)
+                self.delta_heap = Heap()
+
+            assert alloc.size == -ssize
+            self.delta_heap.pop(alloc)
+            self.size -= alloc.size
 
         self.on_update(stamp)
-
-    def create_alloc(self, address, size, frames, parent = None):
-        stamp = None
-        thread = None
-
-        context = Context(stamp, thread, frames)
-        alloc = Allocation(address, address, size, parent, context)
-        return alloc
-
-    def pop_alloc(self, address):
-        return self.heap.pop(address)
 
     counter = 1
     interval = 1000
@@ -605,17 +624,10 @@ class Reporter(Parser):
             assert stamp >= self.last_stamp
             if stamp >= self.last_stamp + self.interval:
                 progress = self.progress()
-                kb = (self.heap.size + 1024 - 1)/1024
-                #sys.stdout.write('%8d KB  %s\n' % (kb, '.' * (kb/16)))
+                kb = (self.size + 1024 - 1)/1024
                 sys.stdout.write('%3d%% %8d KB\n' % (progress, kb))
                 sys.stdout.flush()
                 self.last_stamp = stamp
-        else:
-            #print stamp, kind, alloc, address, size, thread
-            #for frame in frames:
-            #    print '\t', frame
-            #print
-            pass
 
     def on_finish(self):
         if self.counter:
@@ -627,10 +639,10 @@ class Reporter(Parser):
         sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
         sys.stdout.write('\n')
         if heap.size:
-            tree = heap.tree()
+            tree = heap.tree(self.symbolTable)
             tree.write(sys.stdout, threshold = threshold)
             sys.stdout.write('\n')
-            heap.write_profile('memtrail.%s.json' % label)
+            heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
             sys.stdout.write('\n')
 
 
@@ -691,9 +703,11 @@ def report(args):
     reporter = Reporter(input, filter, options.maximum)
     reporter.parse()
 
+    heap = reporter.max_heap
     if options.maximum:
-        reporter.report_heap('maximum', reporter.max_heap, threshold)
-    reporter.report_heap('leaked', reporter.heap, threshold)
+        reporter.report_heap('maximum', heap, threshold)
+    heap.merge(reporter.delta_heap)
+    reporter.report_heap('leaked', heap, threshold)
 
 
 ##########################################################################
