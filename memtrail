@@ -718,8 +718,9 @@ class Dumper(Parser):
 
     def handle_event(self, stamp, addr, ssize, frames):
         sys.stdout.write('%u: 0x%08x %+i\n' % (stamp, addr, ssize))
-        for frame in frames:
-            sys.stdout.write('\t%s\n' % frame)
+        for address in frames:
+            symbol = self.symbolTable.getSymbol(address)
+            sys.stdout.write('\t%s\n' % symbol)
         sys.stdout.write('\n')
 
 
