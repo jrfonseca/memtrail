@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden
+CXXFLAGS = -std=gnu++11 -Wall -fno-omit-frame-pointer -fvisibility=hidden
 NM ?= nm
 
 all: .libmemtrail.so.check sample benchmark

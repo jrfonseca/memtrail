@@ -45,9 +45,10 @@
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
 
-#include <new>
-#include <map>
 #include <limits>
+#include <new>
+#include <unordered_map>
+#include <utility>
 
 
 #if __GNUC__ >= 4
@@ -110,11 +111,11 @@ public:
       typedef libc_allocator<U> other;
    };
 
-   inline libc_allocator() {}
+   inline libc_allocator() noexcept {}
    inline ~libc_allocator() {}
-   inline libc_allocator(const libc_allocator &) {}
+   inline libc_allocator(const libc_allocator &) noexcept {}
    template< class U >
-   inline libc_allocator(const libc_allocator<U> &) {}
+   inline libc_allocator(const libc_allocator<U> &) noexcept {}
 
    inline pointer
    address(reference r) { return &r; }
@@ -122,8 +123,8 @@ public:
    address(const_reference r) { return &r; }
 
    inline pointer
-   allocate(size_type n, std::allocator<void>::const_pointer hint = 0) {
-     return reinterpret_cast<pointer>(__libc_malloc(n * sizeof (T)));
+   allocate(size_type n, const void *hint = 0) {
+      return reinterpret_cast<pointer>(__libc_malloc(n * sizeof (T)));
    }
 
    inline void
@@ -133,11 +134,20 @@ public:
 
    inline size_type
    max_size() const {
-      return std::numeric_limits<size_type>::max() / sizeof(T);
+      return std::numeric_limits<size_type>::max() / sizeof (T);
    }
 
-   inline void construct(pointer p, const T& t) { new(p) T(t); }
-   inline void destroy(pointer p) { p->~T(); }
+   template <class U, class... Args>
+   void
+   construct (U *p, Args &&... args) {
+      ::new ((void *) p) U (std::forward<Args>(args)...);
+   }
+
+   template <class U>
+   inline void
+   destroy(U *p) {
+      p->~U();
+   }
 
    inline bool operator== (libc_allocator const&) { return true; }
    inline bool operator!= (libc_allocator const& a) { return !operator==(a); }
@@ -207,7 +217,10 @@ struct Module {
 static Module modules[MAX_MODULES];
 static unsigned numModules = 0;
 
-typedef std::map< void *, Module *, std::less<void *>, libc_allocator< std::pair<void * const, Module * > > > SymbolMap;
+template< class Key, class T >
+using unordered_map = std::unordered_map< Key, T, std::hash<Key>, std::equal_to<Key>, libc_allocator< std::pair<const Key, T> > >;
+
+typedef unordered_map< void *, Module *> SymbolMap;
 
 static SymbolMap symbols;
 
