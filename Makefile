@@ -5,7 +5,7 @@ NM ?= nm
 all: libmemtrail.so sample
 
 libmemtrail.so: memtrail.cpp
-	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -o $@ $< -ldl
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -o $@ $< -lunwind -ldl
 
 gprof2dot.py:
 	wget --quiet --timestamping http://gprof2dot.jrfonseca.googlecode.com/git/gprof2dot.py

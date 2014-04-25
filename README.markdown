@@ -32,6 +32,8 @@ Requirements
 
 * gzip
 
+* [libunwind](http://www.nongnu.org/libunwind/)
+
 * [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot) for graph output
 
 

@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2011-201 Jose Fonseca
+ * Copyright 2011-2014 Jose Fonseca
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -43,7 +43,8 @@
 #include <unistd.h>
 #include <linux/limits.h> // PIPE_BUF
 
-#include <execinfo.h>
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
 
 #include <new>
 
@@ -66,6 +67,40 @@
 
 extern "C" void *__libc_malloc(size_t size);
 extern "C" void __libc_free(void *ptr);
+
+
+/**
+ * Unlike glibc backtrace, libunwind will not invoke malloc.
+ */
+static inline int
+libunwind_backtrace(void **buffer, int size)
+{
+   unw_context_t uc;
+   unw_getcontext(&uc);
+
+   unw_cursor_t cursor;
+   unw_init_local(&cursor, &uc);
+
+   int count = 0;
+   while (count < size) {
+      if (unw_step(&cursor) <= 0) {
+         break;
+      }
+
+      unw_word_t ip;
+      if (unw_get_reg(&cursor, UNW_REG_IP, &ip) != 0) {
+         break;
+      }
+
+      if (ip == 0) {
+         break;
+      }
+
+      buffer[count++] = (void *)ip;
+   }
+
+   return count;
+}
 
 
 struct header_t {
@@ -307,7 +342,7 @@ _update(const void *ptr, ssize_t size) {
 
       if (size > 0) {
          void *addrs[MAX_STACK];
-         size_t count = backtrace(addrs, ARRAY_SIZE(addrs));
+         size_t count = libunwind_backtrace(addrs, ARRAY_SIZE(addrs));
 
          unsigned char c = (unsigned char) count;
          buf.write(&c, 1);
@@ -318,7 +353,7 @@ _update(const void *ptr, ssize_t size) {
          }
       }
    } else {
-       //fprintf(stderr, "memtrail: warning: recursion\n");
+       fprintf(stderr, "memtrail: warning: recursion\n");
    }
    --recursion;
 
@@ -356,6 +391,7 @@ _memalign(size_t alignment, size_t size)
 }
 
 
+__attribute__((always_inline))
 static inline void *
 _malloc(size_t size)
 {
@@ -376,6 +412,7 @@ _malloc(size_t size)
    return res;
 }
 
+__attribute__((always_inline))
 static inline void _free(void *ptr)
 {
    struct header_t *hdr;
@@ -607,7 +644,6 @@ __attribute__ ((constructor(101)))
 static void
 on_start(void)
 {
-
    // Only trace the current process.
    unsetenv("LD_PRELOAD");
    _open();
