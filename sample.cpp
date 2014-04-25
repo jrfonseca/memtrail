@@ -79,6 +79,22 @@ test_calloc(void)
 
 
 static void
+test_realloc(void)
+{
+   void *p;
+
+   // allocate some
+   p = realloc(NULL, 1024);
+
+   // grow some
+   p = realloc(p, 2048);
+
+   // free some
+   p = realloc(p, 0);
+}
+
+
+static void
 test_memalign(void)
 {
    void *p;
@@ -185,6 +201,7 @@ main(int argc, char *argv[])
    test_dlsym();
    test_malloc();
    test_calloc();
+   test_realloc();
    test_memalign();
    test_cxx();
    test_string();
