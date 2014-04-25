@@ -367,7 +367,9 @@ class Heap:
                         'name': function_name,
                     }
                     if symbol.modulePath is not None:
-                        function['module'] = os.path.basename(symbol.modulePath)
+                        moduleName = os.path.basename(symbol.modulePath)
+                        if moduleName != 'libmemtrail.so':
+                            function['module'] = moduleName
                     functionIndex = len(functions)
                     functionIndices[function_id] = functionIndex
                     functions.append(function)
@@ -537,8 +539,6 @@ class Parser:
         count, = self.read_byte()
 
         frames = []
-        START, MEMTRAIL, USER = range(3)
-        layer = START
         for i in range(count):
             addr, offset, moduleNo = self.read_frame()
 
@@ -549,16 +549,8 @@ class Parser:
                 modulePath = self.read(length)
                 self.modulePaths[moduleNo] = modulePath
 
-            if layer < USER:
-                if modulePath.endswith('libmemtrail.so'):
-                    if layer == START:
-                        layer = MEMTRAIL
-                else:
-                    if layer == MEMTRAIL:
-                        layer = USER
-            if layer == USER:
-                self.symbolTable.addSymbol(addr, modulePath, offset)
-                frames.append(addr)
+            self.symbolTable.addSymbol(addr, modulePath, offset)
+            frames.append(addr)
 
         assert frames
         return tuple(frames)

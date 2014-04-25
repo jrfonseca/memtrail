@@ -72,31 +72,33 @@ extern "C" void __libc_free(void *ptr);
 /**
  * Unlike glibc backtrace, libunwind will not invoke malloc.
  */
-static inline int
-libunwind_backtrace(void **buffer, int size)
+static int
+libunwind_backtrace(unw_context_t *uc, void **buffer, int size)
 {
-   unw_context_t uc;
-   unw_getcontext(&uc);
+   int count = 0;
+   int ret;
+
+   assert(uc != NULL);
 
    unw_cursor_t cursor;
-   unw_init_local(&cursor, &uc);
+   ret = unw_init_local(&cursor, uc);
+   if (ret != 0) {
+      return count;
+   }
 
-   int count = 0;
    while (count < size) {
-      if (unw_step(&cursor) <= 0) {
-         break;
-      }
-
       unw_word_t ip;
-      if (unw_get_reg(&cursor, UNW_REG_IP, &ip) != 0) {
-         break;
-      }
-
-      if (ip == 0) {
+      ret = unw_get_reg(&cursor, UNW_REG_IP, &ip);
+      if (ret != 0 || ip == 0) {
          break;
       }
 
       buffer[count++] = (void *)ip;
+
+      ret = unw_step(&cursor);
+      if (ret <= 0) {
+         break;
+      }
    }
 
    return count;
@@ -181,7 +183,7 @@ public:
 };
 
 
-static inline void
+static void
 _lookup(PipeBuf &buf, void *addr) {
    unsigned key = (size_t)addr % MAX_SYMBOLS;
 
@@ -321,8 +323,8 @@ _open(void) {
 /**
  * Update/log changes to memory allocations.
  */
-static inline void
-_update(const void *ptr, ssize_t size) {
+static void
+_update(const void *ptr, ssize_t size, unw_context_t *uc) {
    pthread_mutex_lock(&mutex);
    static int recursion = 0;
 
@@ -342,7 +344,7 @@ _update(const void *ptr, ssize_t size) {
 
       if (size > 0) {
          void *addrs[MAX_STACK];
-         size_t count = libunwind_backtrace(addrs, ARRAY_SIZE(addrs));
+         size_t count = libunwind_backtrace(uc, addrs, ARRAY_SIZE(addrs));
 
          unsigned char c = (unsigned char) count;
          buf.write(&c, 1);
@@ -361,8 +363,8 @@ _update(const void *ptr, ssize_t size) {
 }
 
 
-static inline void *
-_memalign(size_t alignment, size_t size)
+static void *
+_memalign(size_t alignment, size_t size, unw_context_t *uc)
 {
    void *ptr;
    struct header_t *hdr;
@@ -385,15 +387,14 @@ _memalign(size_t alignment, size_t size)
    res = &hdr[1];
    assert(((size_t)res & (alignment - 1)) == 0);
 
-   _update(res, size);
+   _update(res, size, uc);
 
    return res;
 }
 
 
-__attribute__((always_inline))
-static inline void *
-_malloc(size_t size)
+static void *
+_malloc(size_t size, unw_context_t *uc)
 {
    struct header_t *hdr;
    void *res;
@@ -407,13 +408,13 @@ _malloc(size_t size)
    hdr->ptr = hdr;
    res = &hdr[1];
 
-   _update(res, size);
+   _update(res, size, uc);
 
    return res;
 }
 
-__attribute__((always_inline))
-static inline void _free(void *ptr)
+static void
+_free(void *ptr)
 {
    struct header_t *hdr;
 
@@ -423,7 +424,7 @@ static inline void _free(void *ptr)
 
    hdr = (struct header_t *)ptr - 1;
 
-   _update(ptr, -hdr->size);
+   _update(ptr, -hdr->size, NULL);
 
    __libc_free(hdr->ptr);
 }
@@ -444,7 +445,9 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
       return EINVAL;
    }
 
-   *memptr =  _memalign(alignment, size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   *memptr =  _memalign(alignment, size, &uc);
    if (!*memptr) {
       return -ENOMEM;
    }
@@ -456,21 +459,27 @@ extern "C"
 PUBLIC void *
 memalign(size_t alignment, size_t size)
 {
-   return _memalign(alignment, size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(alignment, size, &uc);
 }
 
 extern "C"
 PUBLIC void *
 valloc(size_t size)
 {
-   return _memalign(sysconf(_SC_PAGESIZE), size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(sysconf(_SC_PAGESIZE), size, &uc);
 }
 
 extern "C"
 PUBLIC void *
 malloc(size_t size)
 {
-   return _malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _malloc(size, &uc);
 }
 
 extern "C"
@@ -486,7 +495,9 @@ PUBLIC void *
 calloc(size_t nmemb, size_t size)
 {
    void *ptr;
-   ptr = _malloc(nmemb * size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   ptr = _malloc(nmemb * size, &uc);
    if (ptr) {
       memset(ptr, 0, nmemb * size);
    }
@@ -514,13 +525,16 @@ realloc(void *ptr, size_t size)
       return NULL;
    }
 
+   unw_context_t uc;
+   unw_getcontext(&uc);
+
    if (!ptr) {
-      return _malloc(size);
+      return _malloc(size, &uc);
    }
 
    hdr = (struct header_t *)ptr - 1;
 
-   new_ptr = _malloc(size);
+   new_ptr = _malloc(size, &uc);
    if (new_ptr) {
       size_t min_size = hdr->size >= size ? size : hdr->size;
       memcpy(new_ptr, ptr, min_size);
@@ -536,7 +550,9 @@ PUBLIC char *
 strdup(const char *s)
 {
    size_t size = strlen(s) + 1;
-   char *ptr = (char *)_malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   char *ptr = (char *)_malloc(size, &uc);
    if (ptr) {
       memcpy(ptr, s, size);
    }
@@ -544,9 +560,8 @@ strdup(const char *s)
 }
 
 
-extern "C"
-PUBLIC int
-vasprintf(char **strp, const char *fmt, va_list ap)
+static int
+_vasprintf(char **strp, const char *fmt, va_list ap, unw_context_t *uc)
 {
    size_t size;
 
@@ -561,7 +576,7 @@ vasprintf(char **strp, const char *fmt, va_list ap)
       va_end(ap_copy);
    }
 
-   *strp = (char *)_malloc(size);
+   *strp = (char *)_malloc(size, uc);
    if (!*strp) {
       return -1;
    }
@@ -569,15 +584,25 @@ vasprintf(char **strp, const char *fmt, va_list ap)
    return vsnprintf(*strp, size, fmt, ap);
 }
 
+extern "C"
+PUBLIC int
+vasprintf(char **strp, const char *fmt, va_list ap)
+{
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _vasprintf(strp, fmt, ap, &uc);
+}
 
 extern "C"
 PUBLIC int
 asprintf(char **strp, const char *format, ...)
 {
+   unw_context_t uc;
+   unw_getcontext(&uc);
    int res;
    va_list ap;
    va_start(ap, format);
-   res = vasprintf(strp, format, ap);
+   res = _vasprintf(strp, format, ap, &uc);
    va_end(ap);
    return res;
 }
@@ -589,13 +614,17 @@ asprintf(char **strp, const char *format, ...)
 
 PUBLIC void *
 operator new(size_t size) throw (std::bad_alloc) {
-   return _malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _malloc(size, &uc);
 }
 
 
 PUBLIC void *
 operator new[] (size_t size) throw (std::bad_alloc) {
-   return _malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _malloc(size, &uc);
 }
 
 
@@ -613,13 +642,17 @@ operator delete[] (void *ptr) throw () {
 
 PUBLIC void *
 operator new(size_t size, const std::nothrow_t&) throw () {
-   return _malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _malloc(size, &uc);
 }
 
 
 PUBLIC void *
 operator new[] (size_t size, const std::nothrow_t&) throw () {
-   return _malloc(size);
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _malloc(size, &uc);
 }
 
 
