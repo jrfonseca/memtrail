@@ -6,6 +6,7 @@ free
 _init
 malloc
 memalign
+memtrail_snapshot
 posix_memalign
 realloc
 strdup

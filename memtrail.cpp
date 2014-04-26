@@ -669,6 +669,18 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
 
 
 /*
+ * Snapshot.
+ */
+
+
+extern "C"
+PUBLIC void
+memtrail_snapshot(void) {
+   _update(0, 0, 0);
+}
+
+
+/*
  * Constructor/destructor
  */
 

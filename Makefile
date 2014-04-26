@@ -23,6 +23,7 @@ test: .libmemtrail.so.check sample gprof2dot.py
 	./memtrail record ./sample
 	./memtrail dump
 	./memtrail report
+	./gprof2dot.py -f json memtrail.snapshot-0.json > memtrail.snapshot-0.dot
 	./gprof2dot.py -f json memtrail.maximum.json > memtrail.maximum.dot
 	./gprof2dot.py -f json memtrail.leaked.json > memtrail.leaked.dot
 

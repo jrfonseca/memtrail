@@ -312,6 +312,12 @@ class Heap:
             self.framesSizes[frames] = ssize
         self.size += ssize
 
+    def copy(self):
+        other = Heap()
+        other.framesSizes.update(self.framesSizes)
+        other.size += self.size
+        return other
+
     def merge(self, other):
         for frames, size in other.framesSizes.iteritems():
             self._update(size, frames)
@@ -574,7 +580,7 @@ class Parser:
 
 class Reporter(Parser):
 
-    def __init__(self, log, filter, search_maximum = True):
+    def __init__(self, log, filter, search_maximum = True, threshold = default_threshold):
         Parser.__init__(self, log)
         self.allocs = {}
         self.size = 0
@@ -583,9 +589,17 @@ class Reporter(Parser):
         self.delta_heap = Heap()
         self.max_stamp = 0
         self.filter = filter
+        self.threshold = threshold
+
+    def parse(self):
+        Parser.parse(self)
+        self.on_finish()
 
     def handle_event(self, stamp, addr, ssize, frames):
-        if ssize > 0:
+        if addr == 0:
+            assert ssize == 0
+            self.on_snapshot()
+        elif ssize > 0:
             alloc = Allocation(addr, ssize, frames)
             if self.filter.filter(alloc):
                 assert alloc.address not in self.allocs
@@ -628,18 +642,32 @@ class Reporter(Parser):
                 sys.stdout.flush()
                 self.last_stamp = stamp
 
+    snapshotNo = 0
+
+    def on_snapshot(self):
+        heap = self.max_heap.copy()
+        heap.merge(self.delta_heap)
+        label = 'snapshot-%u' % self.snapshotNo
+        self.report_heap(label, heap)
+        self.snapshotNo += 1
+
     def on_finish(self):
         if self.counter:
             sys.stdout.write('\n')
+        heap = self.max_heap
+        if self.search_maximum:
+            self.report_heap('maximum', heap)
+        heap.merge(self.delta_heap)
+        self.report_heap('leaked', heap)
 
-    def report_heap(self, label, heap, threshold):
+    def report_heap(self, label, heap):
         sys.stdout.write('----\n')
         sys.stdout.write('\n')
         sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
         sys.stdout.write('\n')
         if heap.size:
             tree = heap.tree(self.symbolTable)
-            tree.write(sys.stdout, threshold = threshold)
+            tree.write(sys.stdout, threshold = self.threshold)
             sys.stdout.write('\n')
             heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
             sys.stdout.write('\n')
@@ -695,18 +723,13 @@ def report(args):
         options.exclude_modules,
     )
 
-    input = 'memtrail.data'
-
-    threshold = options.threshold / 100.0
-
-    reporter = Reporter(input, filter, options.maximum)
+    reporter = Reporter(
+        'memtrail.data',
+        filter,
+        search_maximum = options.maximum,
+        threshold = options.threshold * 0.01
+    )
     reporter.parse()
-
-    heap = reporter.max_heap
-    if options.maximum:
-        reporter.report_heap('maximum', heap, threshold)
-    heap.merge(reporter.delta_heap)
-    reporter.report_heap('leaked', heap, threshold)
 
 
 ##########################################################################

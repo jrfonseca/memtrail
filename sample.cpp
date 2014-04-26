@@ -162,6 +162,17 @@ test_subprocess(void)
 }
 
 
+static void
+test_snapshot(void)
+{
+   typedef void (*memtrail_snapshot_ptr)(void);
+   memtrail_snapshot_ptr memtrail_snapshot = (memtrail_snapshot_ptr)dlsym(RTLD_DEFAULT, "memtrail_snapshot");
+   if (memtrail_snapshot) {
+      memtrail_snapshot();
+   }
+}
+
+
 class TestGlobal
 {
 public:
@@ -206,6 +217,7 @@ main(int argc, char *argv[])
    test_cxx();
    test_string();
    test_subprocess();
+   test_snapshot();
 
    atexit(test_atexit);
 

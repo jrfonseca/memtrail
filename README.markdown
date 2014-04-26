@@ -114,6 +114,18 @@ consumption:
 ![Sample](sample.png)
 
 
+    #include <dlfcn.h>
+    
+    ...
+    
+       typedef void (*memtrail_snapshot_ptr)(void);
+       memtrail_snapshot_ptr memtrail_snapshot;
+       memtrail_snapshot = (memtrail_snapshot_ptr)dlsym(RTLD_DEFAULT, "memtrail_snapshot");
+       if (memtrail_snapshot) {
+          memtrail_snapshot();
+       }
+
+
 Links
 =====
 
