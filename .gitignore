@@ -1,4 +1,5 @@
 .*.sw?
+.libmemtrail.so.check
 *.data
 *.dot
 *.json
