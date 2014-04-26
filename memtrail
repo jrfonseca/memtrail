@@ -318,9 +318,13 @@ class Heap:
         other.size += self.size
         return other
 
-    def merge(self, other):
+    def add_heap(self, other):
         for frames, size in other.framesSizes.iteritems():
             self._update(size, frames)
+
+    def sub_heap(self, other):
+        for frames, size in other.framesSizes.iteritems():
+            self._update(-size, frames)
 
     def tree(self, symbolTable):
         root = TreeNode()
@@ -590,6 +594,7 @@ class Reporter(Parser):
         self.max_stamp = 0
         self.filter = filter
         self.threshold = threshold
+        self.last_snapshot_heap = None
 
     def parse(self):
         Parser.parse(self)
@@ -618,7 +623,7 @@ class Reporter(Parser):
                 return
 
             if self.search_maximum and self.size > self.max_heap.size:
-                self.max_heap.merge(self.delta_heap)
+                self.max_heap.add_heap(self.delta_heap)
                 self.delta_heap = Heap()
 
             assert alloc.size == -ssize
@@ -644,11 +649,27 @@ class Reporter(Parser):
 
     snapshotNo = 0
 
+    snapshotDeltas = False
+
     def on_snapshot(self):
         heap = self.max_heap.copy()
-        heap.merge(self.delta_heap)
+        heap.add_heap(self.delta_heap)
+
         label = 'snapshot-%u' % self.snapshotNo
+
+        if self.snapshotDeltas:
+            last_snapshot_heap = self.last_snapshot_heap
+            self.last_snapshot_heap = heap
+
+            if last_snapshot_heap is not None:
+                delta_heap = heap.copy()
+                delta_heap.sub_heap(last_snapshot_heap)
+                heap = delta_heap
+
+                label += '-delta'
+
         self.report_heap(label, heap)
+        
         self.snapshotNo += 1
 
     def on_finish(self):
@@ -657,7 +678,7 @@ class Reporter(Parser):
         heap = self.max_heap
         if self.search_maximum:
             self.report_heap('maximum', heap)
-        heap.merge(self.delta_heap)
+        heap.add_heap(self.delta_heap)
         self.report_heap('leaked', heap)
 
     def report_heap(self, label, heap):

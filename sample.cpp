@@ -170,6 +170,11 @@ test_snapshot(void)
    if (memtrail_snapshot) {
       memtrail_snapshot();
    }
+   malloc(64);
+   leaked += 64;
+   if (memtrail_snapshot) {
+      memtrail_snapshot();
+   }
 }
 
 
