@@ -604,6 +604,7 @@ class Reporter(Parser):
         self.filter = filter
         self.threshold = threshold
         self.last_snapshot_heap = None
+        self.showProgress = sys.stdout.isatty()
 
     def parse(self):
         Parser.parse(self)
@@ -641,13 +642,12 @@ class Reporter(Parser):
 
         self.on_update(stamp)
 
-    counter = 1
     interval = 1000
 
     last_stamp = 0
 
     def on_update(self, stamp):
-        if self.counter:
+        if self.showProgress:
             assert stamp >= self.last_stamp
             if stamp >= self.last_stamp + self.interval:
                 progress = self.progress()
@@ -682,7 +682,7 @@ class Reporter(Parser):
         self.snapshotNo += 1
 
     def on_finish(self):
-        if self.counter:
+        if self.showProgress:
             sys.stdout.write('\n')
         heap = self.max_heap
         if self.search_maximum:
