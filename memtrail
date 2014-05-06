@@ -153,7 +153,7 @@ class Module:
         p = self.addr2line
 
         if p.returncode is not None:
-            return NO_FUNCTION, 0
+            return NO_FUNCTION, NO_FUNCTION + ':0'
 
         self.addr2line.stdin.write('0x%x\n' % _addr)
         function = self.addr2line.stdout.readline().strip()
@@ -173,6 +173,7 @@ class Symbol(object):
         'modulePath',
         'offset',
         '_function',
+        '_line',
     ]
 
     def __init__(self, addr, modulePath, offset):
@@ -181,8 +182,9 @@ class Symbol(object):
         
         self.offset = offset
         self._function = None
+        self._line = '??:0'
 
-    def function(self):
+    def _resolve(self):
         if self._function is None:
             self._function = NO_FUNCTION
 
@@ -193,21 +195,28 @@ class Symbol(object):
             self._moduleCache[self.modulePath] = module
 
             if module:
-                self._function, line = module.lookup(self.addr, self.offset)
-
+                self._function, self._line = module.lookup(self.addr, self.offset)
         assert self._function is not None
+
+    def function(self):
+        self._resolve()
         return self._function
 
     def id(self):
-        function = self.function()
-        if function != NO_FUNCTION:
-            return '%s!%s' % (self.modulePath, self.function())
+        self._resolve()
+        if self._function != NO_FUNCTION:
+            return '%s!%s' % (self.modulePath, self._function)
         return self.addr
 
     def __str__(self):
-        function = self.function()
-        if function != NO_FUNCTION:
-            return function
+        self._resolve()
+        if self._function != NO_FUNCTION:
+            moduleName = os.path.basename(self.modulePath)
+            if moduleName != 'libmemtrail.so':
+                filename, lineNo = self._line.split(':', 1)
+                if filename != NO_FUNCTION:
+                    return '%s [%s]' % (self._function, self._line)
+            return self._function
         elif self.modulePath is not None:
             return '%s+0x%x' % (self.modulePath, self.offset)
         else:
@@ -340,7 +349,7 @@ class Heap:
                 try:
                     child = parent.children[function_id]
                 except KeyError:
-                    child = TreeNode(symbol)
+                    child = TreeNode(str(symbol))
                     parent.children[function_id] = child
                 child.cost += size
                 parent = child
@@ -372,7 +381,7 @@ class Heap:
                 try:
                     functionIndex = functionIndices[function_id]
                 except KeyError:
-                    function_name = str(symbol)
+                    function_name = symbol.function()
                     function = {
                         'name': function_name,
                     }
