@@ -278,7 +278,7 @@ class TreeNode:
         
         it = iter(children)
         for child in it:
-            if child.cost < threshold * total_cost:
+            if abs(child.cost) < threshold * abs(total_cost):
                 nr_pruned = 1
                 pruned_cost = child.cost
                 for child in it:
@@ -338,7 +338,6 @@ class Heap:
     def tree(self, symbolTable):
         root = TreeNode()
         for frames, size in self.framesSizes.iteritems():
-            assert size >= 0
             if size == 0:
                 continue
             root.cost += size
@@ -369,7 +368,6 @@ class Heap:
         callchains = {}
 
         for frames, size in self.framesSizes.iteritems():
-            assert size >= 0
             if size == 0:
                 continue
 
@@ -403,6 +401,11 @@ class Heap:
 
         events = []
         for callchain, size in callchains.iteritems():
+            if size <= 0:
+                frames = [functions[functionIndex]['name'] for functionIndex in callchain]
+                sys.stderr.write('warning: ignoring %s bytes at %r\n' % (size, frames))
+                continue
+
             event = {
                 'callchain': list(callchain),
                 'cost': [size],
