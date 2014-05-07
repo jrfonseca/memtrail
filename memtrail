@@ -417,9 +417,13 @@ class Heap:
 
         events = []
         for callchain, size in callchains.iteritems():
-            if size <= 0:
-                frames = [functions[functionIndex]['name'] for functionIndex in callchain]
-                sys.stderr.write('warning: ignoring %s bytes at %r\n' % (size, frames))
+            if size == 0:
+                continue
+            if size < 0:
+                if False:
+                    sys.stderr.write('warning: ignoring %s bytes\n' % (size,))
+                    for functionIndex in callchain:
+                        sys.stderr.write('\t%s\n' % functions[functionIndex]['name'])
                 continue
 
             event = {
