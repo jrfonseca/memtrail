@@ -489,8 +489,9 @@ class Filter:
         else:
             return None
 
-    def filter(self, alloc):
-        for symbol in alloc.frames:
+    def filter(self, alloc, symbolTable):
+        for addr in alloc.frames:
+            symbol = symbolTable.getSymbol(addr)
             if self.include_function_re is not None or self.exclude_function_re is not None:
                 function = symbol.function()
                 if self.include_function_re is not None:
@@ -639,7 +640,7 @@ class Reporter(Parser):
             self.on_snapshot()
         elif ssize > 0:
             alloc = Allocation(addr, ssize, frames)
-            if self.filter.filter(alloc):
+            if self.filter(alloc, self.symbolTable):
                 assert alloc.address not in self.allocs
                 self.allocs[alloc.address] = alloc
                 self.size += alloc.size
@@ -769,12 +770,15 @@ def report(args):
     if args:
         optparser.error('wrong number of arguments')
 
-    filter = Filter(
-        options.include_functions,
-        options.exclude_functions,
-        options.include_modules,
-        options.exclude_modules,
-    )
+    if options.include_functions or options.exclude_functions or options.include_modules or options.exclude_modules:
+        filter = Filter(
+            options.include_functions,
+            options.exclude_functions,
+            options.include_modules,
+            options.exclude_modules,
+        ).filter
+    else:
+        filter = lambda alloc, symbolTable: True
 
     reporter = Reporter(
         'memtrail.data',
