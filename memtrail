@@ -617,16 +617,18 @@ class Parser:
 
 class Reporter(Parser):
 
-    def __init__(self, log, filter, search_maximum = True, threshold = default_threshold):
+    def __init__(self, log, filter, search_maximum = True, threshold = default_threshold, snapshot_deltas = False):
         Parser.__init__(self, log)
         self.allocs = {}
         self.size = 0
         self.search_maximum = search_maximum
         self.max_heap = Heap()
         self.delta_heap = Heap()
+        self.cum_delta_heap = Heap()
         self.max_stamp = 0
         self.filter = filter
         self.threshold = threshold
+        self.snapshot_deltas = snapshot_deltas
         self.last_snapshot_heap = None
         self.showProgress = sys.stdout.isatty()
 
@@ -636,9 +638,11 @@ class Reporter(Parser):
 
     def handle_event(self, stamp, addr, ssize, frames):
         if addr == 0:
+            # Snapshot
             assert ssize == 0
             self.on_snapshot()
-        elif ssize > 0:
+        elif ssize >= 0:
+            # Allocation
             alloc = Allocation(addr, ssize, frames)
             if self.filter(alloc, self.symbolTable):
                 assert alloc.address not in self.allocs
@@ -651,6 +655,7 @@ class Reporter(Parser):
             if self.search_maximum and self.size > self.max_heap.size:
                 self.max_stamp = stamp
         else:
+            # Free
             try:
                 alloc = self.allocs.pop(addr)
             except KeyError:
@@ -682,39 +687,39 @@ class Reporter(Parser):
 
     snapshotNo = 0
 
-    snapshotDeltas = False
-
     def on_snapshot(self):
         heap = self.max_heap.copy()
         heap.add_heap(self.delta_heap)
 
         label = 'snapshot-%u' % self.snapshotNo
 
-        if self.snapshotDeltas:
+        if self.snapshot_deltas:
             last_snapshot_heap = self.last_snapshot_heap
             self.last_snapshot_heap = heap
 
             if last_snapshot_heap is not None:
                 delta_heap = heap.copy()
                 delta_heap.sub_heap(last_snapshot_heap)
-                heap = delta_heap
-
-                label += '-delta'
-
-        self.report_heap(label, heap)
+                self.report_heap(label + '-delta', delta_heap, profile=False)
+                self.cum_delta_heap.add_heap(delta_heap)
+        else:
+            self.report_heap(label, heap)
         
         self.snapshotNo += 1
 
     def on_finish(self):
         if self.showProgress:
             sys.stdout.write('\n')
+        if self.snapshot_deltas:
+            self.report_heap('cum_delta', self.cum_delta_heap, profile=True)
+            return
         heap = self.max_heap
         if self.search_maximum:
             self.report_heap('maximum', heap)
         heap.add_heap(self.delta_heap)
         self.report_heap('leaked', heap)
 
-    def report_heap(self, label, heap):
+    def report_heap(self, label, heap, profile=True):
         sys.stdout.write('----\n')
         sys.stdout.write('\n')
         sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
@@ -723,8 +728,11 @@ class Reporter(Parser):
             tree = heap.tree(self.symbolTable)
             tree.write(sys.stdout, threshold = self.threshold)
             sys.stdout.write('\n')
-            heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
-            sys.stdout.write('\n')
+            sys.stdout.flush()
+            if profile:
+                heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
+                sys.stdout.write('\n')
+                sys.stdout.flush()
 
 
 def report(args):
@@ -765,6 +773,11 @@ def report(args):
         action="store_false",
         dest="maximum", default=True,
         help="skip maximum detection (speeds ups reporting tremendously)")
+    optparser.add_option(
+        '--snapshot-deltas',
+        action="store_true",
+        dest="snapshot_deltas", default=False,
+        help="show deltas between heap snapshots")
     (options, args) = optparser.parse_args(args)
 
     if args:
@@ -784,6 +797,7 @@ def report(args):
         'memtrail.data',
         filter,
         search_maximum = options.maximum,
+        snapshot_deltas = options.snapshot_deltas,
         threshold = options.threshold * 0.01
     )
     reporter.parse()
