@@ -274,6 +274,7 @@ class TreeNode:
 
     def _write(self, stream, indent, threshold, total_cost):
         children = self.children.values()
+        children = [child for child in children if child.cost]
         children.sort(lambda x, y: cmp(x.cost, y.cost), reverse = True)
         
         it = iter(children)
