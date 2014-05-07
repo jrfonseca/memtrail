@@ -168,6 +168,8 @@ class Symbol(object):
         None: None,
     }
 
+    _cwd = os.getcwd() + os.path.sep
+
     __slots__ = [
         'addr',
         'modulePath',
@@ -215,7 +217,9 @@ class Symbol(object):
             if moduleName != 'libmemtrail.so':
                 filename, lineNo = self._line.split(':', 1)
                 if filename != NO_FUNCTION:
-                    return '%s [%s]' % (self._function, self._line)
+                    if filename.startswith(self._cwd):
+                        filename = filename[len(self._cwd):]
+                    return '%s [%s:%s]' % (self._function, filename, lineNo)
             return self._function
         elif self.modulePath is not None:
             return '%s+0x%x' % (self.modulePath, self.offset)
