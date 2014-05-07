@@ -419,6 +419,11 @@ _malloc(size_t size, unw_context_t *uc)
    struct header_t *hdr;
    void *res;
 
+   if (size == 0) {
+      // Honour malloc(0), but allocate one byte for accounting purposes.
+      ++size;
+   }
+
    hdr = (struct header_t *)__libc_malloc(sizeof *hdr + size);
    if (!hdr) {
       return NULL;
@@ -540,16 +545,16 @@ realloc(void *ptr, size_t size)
    struct header_t *hdr;
    void *new_ptr;
 
-   if (!size) {
-      _free(ptr);
-      return NULL;
-   }
-
    unw_context_t uc;
    unw_getcontext(&uc);
 
    if (!ptr) {
       return _malloc(size, &uc);
+   }
+
+   if (!size) {
+      _free(ptr);
+      return NULL;
    }
 
    hdr = (struct header_t *)ptr - 1;

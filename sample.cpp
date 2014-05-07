@@ -57,6 +57,12 @@ test_malloc(void)
    // free some
    free(p);
 
+   // allocate 0 bytes
+   p = malloc(0);
+   assert(p);
+   free(p);
+
+   // free nothing
    free(NULL);
 }
 
@@ -75,6 +81,14 @@ test_calloc(void)
 
    // free some
    free(p);
+
+   // allocate 0 bytes
+   p = calloc(0, 1);
+   assert(p);
+   free(p);
+   p = calloc(1, 0);
+   assert(p);
+   free(p);
 }
 
 
@@ -91,6 +105,13 @@ test_realloc(void)
 
    // free some
    p = realloc(p, 0);
+   assert(!p);
+
+   // allocate 0 bytes
+   p = realloc(NULL, 0);
+   assert(p);
+   p = realloc(p, 0);
+   assert(!p);
 }
 
 
@@ -110,6 +131,11 @@ test_memalign(void)
    leaked += 1024;
 
    // free some
+   free(p);
+
+   // allocate 0 bytes
+   posix_memalign(&p, sizeof (void*), 0);
+   assert(p);
    free(p);
 }
 
