@@ -28,7 +28,6 @@
 #define _GNU_SOURCE
 #endif
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -67,6 +66,27 @@
 
 extern "C" void *__libc_malloc(size_t size);
 extern "C" void __libc_free(void *ptr);
+
+
+static void
+_assert_fail(const char *expr,
+             const char *file,
+             unsigned line,
+             const char *function)
+{
+   fprintf(stderr, "%s:%u:%s: Assertion `%s' failed.\n", file, line, function, expr);
+   abort();
+}
+
+
+/**
+ * glibc's assert macro invokes malloc, so roll our own to avoid recursion.
+ */
+#ifndef NDEBUG
+#define assert(expr) ((expr) ? (void)0 : _assert_fail(#expr, __FILE__, __LINE__, __FUNCTION__))
+#else
+#define assert(expr) while (0) { (void)(expr) }
+#endif
 
 
 /**
