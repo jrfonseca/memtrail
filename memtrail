@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ##########################################################################
 #
-# Copyright 2011 Jose Fonseca
+# Copyright 2011-2014 Jose Fonseca
 # All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -69,7 +69,12 @@ def record(args):
         '-d', '--debug',
         action="store_true",
         dest="debug", default=False,
-        help="start within gdb")
+        help="debug with gdb")
+    optparser.add_option(
+        '-p', '--profile',
+        action="store_true",
+        dest="profile", default=False,
+        help="profile with perf")
     (options, args) = optparser.parse_args(args)
 
     if not args:
@@ -86,6 +91,12 @@ def record(args):
             'gdb',
             '--ex', 'set exec-wrapper env LD_PRELOAD=%s' % ld_preload,
             '--args'
+        ] + args
+        env = None
+    elif options.profile:
+        cmd = [
+            'perf', 'record', '-g',
+            'env', 'LD_PRELOAD=%s' % ld_preload,
         ] + args
         env = None
     else:
