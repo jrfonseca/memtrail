@@ -47,6 +47,8 @@
 
 #include <new>
 
+#include "list.h"
+
 
 #if __GNUC__ >= 4
    #define PUBLIC __attribute__ ((visibility("default")))
@@ -126,8 +128,20 @@ libunwind_backtrace(unw_context_t *uc, void **buffer, int size)
 
 
 struct header_t {
-   size_t size;
+   struct list_head list_head;
+
+   // Real pointer
    void *ptr;
+
+   // Size
+   size_t size;
+
+   unsigned allocated:1;
+   unsigned pending:1;
+   unsigned internal:1;
+
+   unsigned char addr_count;
+   void *addrs[MAX_STACK];
 };
 
 
@@ -139,6 +153,9 @@ total_size = 0;
 
 static ssize_t
 max_size = 0;
+
+struct list_head
+hdr_list = { &hdr_list, &hdr_list };
 
 static int fd = -1;
 
@@ -340,42 +357,110 @@ _open(void) {
 }
 
 
+static inline void
+_log(struct header_t *hdr) {
+   const void *ptr = hdr->ptr;
+   ssize_t ssize = hdr->allocated ? (ssize_t)hdr->size : -(ssize_t)hdr->size;
+
+   assert(ptr);
+   assert(ssize);
+
+   PipeBuf buf(fd);
+   buf.write(&ptr, sizeof ptr);
+   buf.write(&ssize, sizeof ssize);
+
+   if (hdr->allocated) {
+      unsigned char c = (unsigned char) hdr->addr_count;
+      buf.write(&c, 1);
+
+      for (size_t i = 0; i < hdr->addr_count; ++i) {
+         void *addr = hdr->addrs[i];
+         _lookup(buf, addr);
+      }
+   }
+}
+
+static void
+_flush(void) {
+   struct header_t *it;
+   struct header_t *tmp;
+   for (it = (struct header_t *)hdr_list.next,
+	     tmp = (struct header_t *)it->list_head.next;
+        &it->list_head != &hdr_list;
+	     it = tmp, tmp = (struct header_t *)tmp->list_head.next) {
+      assert(it->pending);
+      if (0) fprintf(stderr, "flush %p %zu\n", &it[1], it->size);
+      if (!it->internal) {
+         _log(it);
+      }
+      list_del(&it->list_head);
+      if (!it->allocated) {
+         __libc_free(it->ptr);
+      } else {
+         it->pending = false;
+      }
+   }
+}
+
+static inline void
+init(struct header_t *hdr,
+     size_t size,
+     void *ptr,
+     unw_context_t *uc)
+{
+   hdr->ptr = ptr;
+   hdr->size = size;
+   hdr->allocated = true;
+   hdr->pending = false;
+   hdr->internal = false;
+   hdr->addr_count = libunwind_backtrace(uc, hdr->addrs, ARRAY_SIZE(hdr->addrs));
+}
+
+
 /**
  * Update/log changes to memory allocations.
  */
-static void
-_update(const void *ptr, ssize_t size, unw_context_t *uc) {
+static inline void
+_update(struct header_t *hdr,
+        bool allocating = true)
+{
    pthread_mutex_lock(&mutex);
+
    static int recursion = 0;
 
    if (recursion++ <= 0) {
-      total_size += size;
+      if (!allocating && max_size == total_size) {
+         _flush();
+      }
 
-      if (total_size > max_size) {
+      hdr->allocated = allocating;
+      ssize_t size = allocating ? (ssize_t)hdr->size : -(ssize_t)hdr->size;
+
+      if (hdr->pending) {
+         assert(!allocating);
+         hdr->pending = false;
+         list_del(&hdr->list_head);
+      } else {
+         hdr->pending = true;
+         list_add(&hdr->list_head, &hdr_list);
+      }
+
+      total_size += size;
+      assert(total_size >= 0);
+
+      if (total_size >= max_size) {
          max_size = total_size;
       }
+   } else {
+      fprintf(stderr, "memtrail: warning: recursion\n");
+      hdr->internal = true;
 
-      _open();
-
-      PipeBuf buf(fd);
-
-      buf.write(&ptr, sizeof ptr);
-      buf.write(&size, sizeof size);
-
-      if (size > 0) {
-         void *addrs[MAX_STACK];
-         size_t count = libunwind_backtrace(uc, addrs, ARRAY_SIZE(addrs));
-
-         unsigned char c = (unsigned char) count;
-         buf.write(&c, 1);
-
-         for (size_t i = 0; i < count; ++i) {
-            void *addr = addrs[i];
-            _lookup(buf, addr);
+      assert(!hdr->pending);
+      if (!hdr->pending) {
+         if (!allocating) {
+            __libc_free(hdr->ptr);
          }
       }
-   } else {
-       fprintf(stderr, "memtrail: warning: recursion\n");
    }
    --recursion;
 
@@ -402,12 +487,12 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
 
    hdr = (struct header_t *)((((size_t)ptr + sizeof *hdr + alignment - 1) & ~(alignment - 1)) - sizeof *hdr);
 
-   hdr->size = size;
-   hdr->ptr = ptr;
+   init(hdr, size, ptr, uc);
    res = &hdr[1];
    assert(((size_t)res & (alignment - 1)) == 0);
+   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
 
-   _update(res, size, uc);
+   _update(hdr);
 
    return res;
 }
@@ -429,11 +514,11 @@ _malloc(size_t size, unw_context_t *uc)
       return NULL;
    }
 
-   hdr->size = size;
-   hdr->ptr = hdr;
+   init(hdr, size, hdr, uc);
    res = &hdr[1];
+   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
 
-   _update(res, size, uc);
+   _update(hdr);
 
    return res;
 }
@@ -449,9 +534,9 @@ _free(void *ptr)
 
    hdr = (struct header_t *)ptr - 1;
 
-   _update(ptr, -hdr->size, NULL);
+   _update(hdr, false);
 
-   __libc_free(hdr->ptr);
+   if (0) fprintf(stderr, "free %p %zu\n", ptr, hdr->size);
 }
 
 
@@ -701,7 +786,14 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
 extern "C"
 PUBLIC void
 memtrail_snapshot(void) {
-   _update(0, 0, 0);
+   pthread_mutex_lock(&mutex);
+   _flush();
+   const void *ptr = NULL;
+   const ssize_t size = 0;
+   PipeBuf buf(fd);
+   buf.write(&ptr, sizeof ptr);
+   buf.write(&size, sizeof size);
+   pthread_mutex_unlock(&mutex);
 }
 
 
@@ -724,6 +816,10 @@ __attribute__ ((destructor(101)))
 static void
 on_exit(void)
 {
+   pthread_mutex_lock(&mutex);
+   _flush();
+   pthread_mutex_unlock(&mutex);
+
    fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
    fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
 

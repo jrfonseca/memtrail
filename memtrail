@@ -597,7 +597,7 @@ class Parser:
 
         assert frames
         return tuple(frames)
-    
+
     def handle_event(self, stamp, addr, ssize, frames):
         pass
 
