@@ -699,11 +699,11 @@ __attribute__ ((destructor(101)))
 static void
 on_exit(void)
 {
-    fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
-    fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
+   fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
+   fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
 
-    // We don't close the fd here, just in case another destructor that deals
-    // with memory gets called after us.
+   // We don't close the fd here, just in case another destructor that deals
+   // with memory gets called after us.
 }
 
 
