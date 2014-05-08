@@ -31,6 +31,8 @@
 
 #include <dlfcn.h>
 
+#include "memtrail.h"
+
 
 size_t leaked = 0;
 
@@ -191,16 +193,10 @@ test_subprocess(void)
 static void
 test_snapshot(void)
 {
-   typedef void (*memtrail_snapshot_ptr)(void);
-   memtrail_snapshot_ptr memtrail_snapshot = (memtrail_snapshot_ptr)dlsym(RTLD_DEFAULT, "memtrail_snapshot");
-   if (memtrail_snapshot) {
-      memtrail_snapshot();
-   }
+   memtrail_snapshot();
    malloc(64);
    leaked += 64;
-   if (memtrail_snapshot) {
-      memtrail_snapshot();
-   }
+   memtrail_snapshot();
 }
 
 

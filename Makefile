@@ -18,6 +18,8 @@ gprof2dot.py:
 	wget --quiet --timestamping http://gprof2dot.jrfonseca.googlecode.com/git/gprof2dot.py
 	chmod +x gprof2dot.py
 
+sample: sample.cpp memtrail.h
+
 test: .libmemtrail.so.check sample gprof2dot.py
 	$(RM) memtrail.data $(wildcard memtrail.*.json) $(wildcard memtrail.*.dot)
 	./memtrail record ./sample
