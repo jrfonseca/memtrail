@@ -19,26 +19,24 @@ gprof2dot.py:
 	chmod +x gprof2dot.py
 
 test: .libmemtrail.so.check sample gprof2dot.py
-	$(RM) memtrail.data
+	$(RM) memtrail.data $(wildcard memtrail.*.json) $(wildcard memtrail.*.dot)
 	./memtrail record ./sample
 	./memtrail dump
-	./memtrail report
-	./gprof2dot.py -f json memtrail.snapshot-0.json > memtrail.snapshot-0.dot
-	./gprof2dot.py -f json memtrail.maximum.json > memtrail.maximum.dot
-	./gprof2dot.py -f json memtrail.leaked.json > memtrail.leaked.dot
+	./memtrail report --show-snapshots --show-snapshot-deltas --show-cumulative-snapshot-delta --show-maximum --show-leaks --output-graphs
+	$(foreach LABEL, snapshot-0 snapshot-1 snapshot-1-delta maximum leaked, ./gprof2dot.py -f json memtrail.$(LABEL).json > memtrail.$$LABEL.dot ;)
 
 test-debug: .libmemtrail.so.check sample
-	$(RM) memtrail.data
+	$(RM) memtrail.data $(wildcard memtrail.*.json) $(wildcard memtrail.*.dot)
 	./memtrail record --debug ./sample
 
 bench: .libmemtrail.so.check benchmark
 	$(RM) memtrail.data
 	./memtrail record ./benchmark
-	time -p ./memtrail report
+	time -p ./memtrail report --show-maximum
 
 profile: benchmark gprof2dot.py
 	./memtrail record ./benchmark
-	python -m cProfile -o memtrail.pstats -- ./memtrail report
+	python -m cProfile -o memtrail.pstats -- ./memtrail report --show-maximum
 	./gprof2dot.py -f pstats memtrail.pstats > memtrail.dot
 
 clean:

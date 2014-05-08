@@ -449,7 +449,20 @@ class Heap:
         sys.stdout.write('%s written\n' % filename)
 
 
-class Filter:
+
+class BaseFilter:
+
+    def __call__(self, alloc, symbolTable):
+        raise NotImplementedError
+
+
+class NoFilter(BaseFilter):
+
+    def __call__(self, alloc, symbolTable):
+        return True
+
+
+class Filter(BaseFilter):
 
     def __init__(
         self,
@@ -489,7 +502,7 @@ class Filter:
         else:
             return None
 
-    def filter(self, alloc, symbolTable):
+    def __call__(self, alloc, symbolTable):
         for addr in alloc.frames:
             symbol = symbolTable.getSymbol(addr)
             if self.include_function_re is not None or self.exclude_function_re is not None:
@@ -617,20 +630,24 @@ class Parser:
 
 class Reporter(Parser):
 
-    def __init__(self, log, filter, search_maximum = True, threshold = default_threshold, snapshot_deltas = False):
+    def __init__(self, log, filter, options):
         Parser.__init__(self, log)
+        self.filter = filter
+        self.threshold = options.threshold * 0.01
+        self.show_progress = sys.stdout.isatty()
+        self.show_snapshots = options.show_snapshots
+        self.show_snapshot_deltas = options.show_snapshot_deltas
+        self.show_cum_snapshot_delta = options.show_cum_snapshot_delta
+        self.show_maximum = options.show_maximum
+        self.show_leaks = options.show_leaks
+        self.output_json = options.output_json
+        
         self.allocs = {}
         self.size = 0
-        self.search_maximum = search_maximum
         self.max_heap = Heap()
         self.delta_heap = Heap()
-        self.cum_delta_heap = Heap()
-        self.max_stamp = 0
-        self.filter = filter
-        self.threshold = threshold
-        self.snapshot_deltas = snapshot_deltas
         self.last_snapshot_heap = None
-        self.showProgress = sys.stdout.isatty()
+        self.cum_snapshot_delta_heap = Heap()
 
     def parse(self):
         Parser.parse(self)
@@ -651,9 +668,6 @@ class Reporter(Parser):
                 self.delta_heap.add(alloc)
             else:
                 return True
-
-            if self.search_maximum and self.size > self.max_heap.size:
-                self.max_stamp = stamp
         else:
             # Free
             try:
@@ -661,7 +675,7 @@ class Reporter(Parser):
             except KeyError:
                 return
 
-            if self.search_maximum and self.size > self.max_heap.size:
+            if self.show_maximum and self.size > self.max_heap.size:
                 self.max_heap.add_heap(self.delta_heap)
                 self.delta_heap = Heap()
 
@@ -676,7 +690,7 @@ class Reporter(Parser):
     last_stamp = 0
 
     def on_update(self, stamp):
-        if self.showProgress:
+        if self.show_progress:
             assert stamp >= self.last_stamp
             if stamp >= self.last_stamp + self.interval:
                 progress = self.progress()
@@ -685,41 +699,45 @@ class Reporter(Parser):
                 sys.stdout.flush()
                 self.last_stamp = stamp
 
-    snapshotNo = 0
+    snapshot_no = 0
 
     def on_snapshot(self):
-        heap = self.max_heap.copy()
-        heap.add_heap(self.delta_heap)
+        if self.show_snapshots or self.show_snapshot_deltas or self.show_cum_snapshot_delta:
+            heap = self.max_heap.copy()
+            heap.add_heap(self.delta_heap)
 
-        label = 'snapshot-%u' % self.snapshotNo
+            label = 'snapshot-%u' % self.snapshot_no
 
-        if self.snapshot_deltas:
-            last_snapshot_heap = self.last_snapshot_heap
-            self.last_snapshot_heap = heap
+            if self.show_snapshots:
+                self.report_heap(label, heap)
 
-            if last_snapshot_heap is not None:
-                delta_heap = heap.copy()
-                delta_heap.sub_heap(last_snapshot_heap)
-                self.report_heap(label + '-delta', delta_heap, profile=False)
-                self.cum_delta_heap.add_heap(delta_heap)
-        else:
-            self.report_heap(label, heap)
+            if self.show_snapshot_deltas or self.show_cum_snapshot_delta:
+                last_snapshot_heap = self.last_snapshot_heap
+                self.last_snapshot_heap = heap
+
+                if last_snapshot_heap is not None:
+                    delta_heap = heap.copy()
+                    delta_heap.sub_heap(last_snapshot_heap)
+                    if self.show_snapshot_deltas:
+                        self.report_heap(label + '-delta', delta_heap)
+                    if self.show_cum_snapshot_delta:
+                        self.cum_snapshot_delta_heap.add_heap(delta_heap)
         
-        self.snapshotNo += 1
+        self.snapshot_no += 1
 
     def on_finish(self):
-        if self.showProgress:
+        if self.show_progress:
             sys.stdout.write('\n')
-        if self.snapshot_deltas:
-            self.report_heap('cum_delta', self.cum_delta_heap, profile=True)
-            return
-        heap = self.max_heap
-        if self.search_maximum:
-            self.report_heap('maximum', heap)
-        heap.add_heap(self.delta_heap)
-        self.report_heap('leaked', heap)
+        if self.show_cum_snapshot_delta:
+            self.report_heap('cum-snapshot-delta', self.cum_snapshot_delta_heap)
+        if self.show_maximum:
+            self.report_heap('maximum', self.max_heap)
+        if self.show_leaks:
+            heap = self.max_heap
+            heap.add_heap(self.delta_heap)
+            self.report_heap('leaked', heap)
 
-    def report_heap(self, label, heap, profile=True):
+    def report_heap(self, label, heap):
         sys.stdout.write('----\n')
         sys.stdout.write('\n')
         sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
@@ -729,7 +747,7 @@ class Reporter(Parser):
             tree.write(sys.stdout, threshold = self.threshold)
             sys.stdout.write('\n')
             sys.stdout.flush()
-            if profile:
+            if self.output_json:
                 heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
                 sys.stdout.write('\n')
                 sys.stdout.flush()
@@ -769,16 +787,39 @@ def report(args):
         type="float", dest="threshold", default = default_threshold*100.0,
         help="eliminate nodes below this threshold [default: %default]")
     optparser.add_option(
-        '--no-maximum',
-        action="store_false",
-        dest="maximum", default=True,
-        help="skip maximum detection (speeds ups reporting tremendously)")
-    optparser.add_option(
-        '--snapshot-deltas',
+        '--show-snapshots',
         action="store_true",
-        dest="snapshot_deltas", default=False,
+        dest="show_snapshots", default=False,
         help="show deltas between heap snapshots")
+    optparser.add_option(
+        '--show-snapshot-deltas',
+        action="store_true",
+        dest="show_snapshot_deltas", default=False,
+        help="show deltas between heap snapshots")
+    optparser.add_option(
+        '--show-cumulative-snapshot-delta',
+        action="store_true",
+        dest="show_cum_snapshot_delta", default=False,
+        help="show cumulative delta between heap snapshots")
+    optparser.add_option(
+        '--show-maximum',
+        action="store_true",
+        dest="show_maximum", default=False,
+        help="show maximum allocation")
+    optparser.add_option(
+        '--show-leaks',
+        action="store_true",
+        dest="show_leaks", default=False,
+        help="show leaked allocations")
+    optparser.add_option(
+        '--output-graphs',
+        action="store_true",
+        dest="output_json", default=False,
+        help="output gprof2dot json graphs")
     (options, args) = optparser.parse_args(args)
+
+    if not options.show_maximum and not options.show_snapshots and not options.show_snapshot_deltas:
+        options.show_leaks = True
 
     if args:
         optparser.error('wrong number of arguments')
@@ -789,16 +830,14 @@ def report(args):
             options.exclude_functions,
             options.include_modules,
             options.exclude_modules,
-        ).filter
+        )
     else:
-        filter = lambda alloc, symbolTable: True
+        filter = NoFilter()
 
     reporter = Reporter(
         'memtrail.data',
         filter,
-        search_maximum = options.maximum,
-        snapshot_deltas = options.snapshot_deltas,
-        threshold = options.threshold * 0.01
+        options
     )
     reporter.parse()
 
