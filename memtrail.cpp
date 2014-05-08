@@ -440,6 +440,7 @@ _update(struct header_t *hdr,
          assert(!allocating);
          hdr->pending = false;
          list_del(&hdr->list_head);
+         __libc_free(hdr->ptr);
       } else {
          hdr->pending = true;
          list_add(&hdr->list_head, &hdr_list);
