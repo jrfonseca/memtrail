@@ -794,7 +794,9 @@ memtrail_snapshot(void) {
    PipeBuf buf(fd);
    buf.write(&ptr, sizeof ptr);
    buf.write(&size, sizeof size);
+   size_t current_total_size = total_size;
    pthread_mutex_unlock(&mutex);
+   fprintf(stderr, "memtrail: snapshot %zi bytes\n", current_total_size);
 }
 
 
@@ -819,10 +821,12 @@ on_exit(void)
 {
    pthread_mutex_lock(&mutex);
    _flush();
+   size_t current_max_size = max_size;
+   size_t current_total_size = total_size;
    pthread_mutex_unlock(&mutex);
 
-   fprintf(stderr, "memtrail: maximum %zi bytes\n", max_size);
-   fprintf(stderr, "memtrail: leaked %zi bytes\n", total_size);
+   fprintf(stderr, "memtrail: maximum %zi bytes\n", current_max_size);
+   fprintf(stderr, "memtrail: leaked %zi bytes\n", current_total_size);
 
    // We don't close the fd here, just in case another destructor that deals
    // with memory gets called after us.
