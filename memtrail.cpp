@@ -784,19 +784,35 @@ operator delete[] (void *ptr, const std::nothrow_t&) throw () {
  */
 
 
+static size_t last_snapshot_size = 0;
+static unsigned snapshot_no = 0;
+
 extern "C"
 PUBLIC void
 memtrail_snapshot(void) {
    pthread_mutex_lock(&mutex);
+
    _flush();
-   const void *ptr = NULL;
-   const ssize_t size = 0;
+
+   static const void *ptr = NULL;
+   static const ssize_t size = 0;
    PipeBuf buf(fd);
    buf.write(&ptr, sizeof ptr);
    buf.write(&size, sizeof size);
+
    size_t current_total_size = total_size;
+   size_t current_delta_size;
+   if (snapshot_no)
+      current_delta_size = last_snapshot_size - current_total_size;
+   else
+      current_delta_size = 0;
+   last_snapshot_size = current_total_size;
+
+   ++snapshot_no;
+
    pthread_mutex_unlock(&mutex);
-   fprintf(stderr, "memtrail: snapshot %zi bytes\n", current_total_size);
+
+   fprintf(stderr, "memtrail: snapshot %zi bytes (%+zi bytes)\n", current_total_size, current_delta_size);
 }
 
 
