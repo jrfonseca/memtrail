@@ -276,6 +276,10 @@ class Allocation(object):
 default_threshold = 0.01
 
 
+def format_size(n):
+    return '{0:,}B'.format(n)
+
+
 class TreeNode:
 
     def __init__(self, label=''):
@@ -283,9 +287,9 @@ class TreeNode:
         self.cost = 0
         self.children = {}
 
-    def write(self, stream, threshold = default_threshold):
+    def write(self, stream, threshold = default_threshold, indent = ''):
         assert not self.label
-        self._write(stream, '', threshold, self.cost)
+        self._write(stream, indent, threshold, self.cost)
 
     def _write(self, stream, indent, threshold, total_cost):
         children = self.children.values()
@@ -301,11 +305,11 @@ class TreeNode:
                     absolute_cost = child.cost
                     nr_pruned += 1
                 relative_cost = float(pruned_cost) / float(total_cost)
-                stream.write('%s->%5.2f%% (%uB) in %u places, all below the %.2f%% threshold\n' % (indent, 100.0 * relative_cost, pruned_cost, nr_pruned, 100.0 * threshold))
+                stream.write('%s-> %.2f%% (%s) in %u places, all below the %.2f%% threshold\n' % (indent, 100.0 * relative_cost, format_size(pruned_cost), nr_pruned, 100.0 * threshold))
                 break
 
             relative_cost = float(child.cost) / float(total_cost)
-            stream.write('%s->%5.2f%% (%uB): %s\n' % (indent, 100.0 * relative_cost, child.cost, child.label))
+            stream.write('%s-> %.2f%% (%s): %s\n' % (indent, 100.0 * relative_cost, format_size(child.cost), child.label))
             if child is children[-1]:
                child_indent = indent + '  '
             else:
@@ -738,19 +742,17 @@ class Reporter(Parser):
             self.report_heap('leaked', heap)
 
     def report_heap(self, label, heap):
-        sys.stdout.write('----\n')
-        sys.stdout.write('\n')
-        sys.stdout.write('%s: %u bytes\n' % (label, heap.size))
-        sys.stdout.write('\n')
+        if self.show_progress:
+            sys.stdout.write('\n')
+        sys.stdout.write('%s: %s\n' % (label, format_size(heap.size)))
         if heap.size:
             tree = heap.tree(self.symbolTable)
-            tree.write(sys.stdout, threshold = self.threshold)
+            tree.write(sys.stdout, threshold = self.threshold, indent='  ')
+            if self.output_json:
+                sys.stdout.flush()
+                heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
             sys.stdout.write('\n')
             sys.stdout.flush()
-            if self.output_json:
-                heap.write_profile(self.symbolTable, 'memtrail.%s.json' % label)
-                sys.stdout.write('\n')
-                sys.stdout.flush()
 
 
 def report(args):
