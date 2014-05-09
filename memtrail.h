@@ -31,6 +31,7 @@
 #ifdef __linux__
 
 
+#include <stdint.h>
 #include <dlfcn.h>
 
 
@@ -48,7 +49,7 @@ _memtrail_snapshot_noop(void) {
 
 static inline void
 _memtrail_snapshot_init(void) {
-   _memtrail_snapshot_ptr ptr = (_memtrail_snapshot_ptr)dlsym(RTLD_DEFAULT, "memtrail_snapshot");
+   _memtrail_snapshot_ptr ptr = (_memtrail_snapshot_ptr)(uintptr_t)dlsym(RTLD_DEFAULT, "memtrail_snapshot");
    memtrail_snapshot = ptr ? ptr : &_memtrail_snapshot_noop;
    memtrail_snapshot();
 }
