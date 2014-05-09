@@ -184,7 +184,7 @@ static void
 test_subprocess(void)
 {
    const char *ld_preload = getenv("LD_PRELOAD");
-   assert(ld_preload == NULL);
+   assert(ld_preload == NULL || strstr(ld_preload, "memtrail.so") == NULL);
 
    system("env | grep LD_PRELOAD");
 }
