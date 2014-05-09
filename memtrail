@@ -818,7 +818,11 @@ def report(args):
         help="output gprof2dot json graphs")
     (options, args) = optparser.parse_args(args)
 
-    if not options.show_maximum and not options.show_snapshots and not options.show_snapshot_deltas:
+    # Default to showing leaks if nothing else was requested.
+    if not options.show_maximum and \
+       not options.show_snapshots and \
+       not options.show_snapshot_deltas and \
+       not options.show_cum_snapshot_delta:
         options.show_leaks = True
 
     if args:
