@@ -61,7 +61,7 @@
 #define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
 
-#define MAX_STACK 16
+#define MAX_STACK 32
 #define MAX_MODULES 128
 #define MAX_SYMBOLS 131071
 
