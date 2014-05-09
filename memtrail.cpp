@@ -61,6 +61,8 @@
 #define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
 
+#define RECORD 1
+
 #define MAX_STACK 32
 #define MAX_MODULES 128
 #define MAX_SYMBOLS 131071
@@ -194,6 +196,10 @@ public:
 
    inline void
    write(const void *buf, size_t nbytes) {
+      if (!RECORD) {
+         return;
+      }
+
       if (nbytes) {
          assert(_written + nbytes <= PIPE_BUF);
          memcpy(_buf + _written, buf, nbytes);
@@ -203,6 +209,10 @@ public:
 
    inline void
    flush(void) {
+      if (!RECORD) {
+         return;
+      }
+
       if (_written) {
          ssize_t ret;
          ret = ::write(_fd, _buf, _written);
@@ -413,7 +423,10 @@ init(struct header_t *hdr,
    hdr->allocated = true;
    hdr->pending = false;
    hdr->internal = false;
-   hdr->addr_count = libunwind_backtrace(uc, hdr->addrs, ARRAY_SIZE(hdr->addrs));
+
+   if (RECORD) {
+      hdr->addr_count = libunwind_backtrace(uc, hdr->addrs, ARRAY_SIZE(hdr->addrs));
+   }
 }
 
 
