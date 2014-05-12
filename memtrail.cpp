@@ -816,7 +816,7 @@ memtrail_snapshot(void) {
    size_t current_total_size = total_size;
    size_t current_delta_size;
    if (snapshot_no)
-      current_delta_size = last_snapshot_size - current_total_size;
+      current_delta_size = current_total_size - last_snapshot_size;
    else
       current_delta_size = 0;
    last_snapshot_size = current_total_size;
