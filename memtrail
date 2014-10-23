@@ -138,7 +138,7 @@ class Module:
 
         self.mime_type = subprocess.check_output(['file', '--dereference', '--brief', '--mime-type', self._path]).strip()
         if self.mime_type not in ('application/x-executable', 'application/x-sharedlib'):
-            sys.stderr.write('memtrail: warning: unexpected mime-type %s for %s\n' % (mime_type, path))
+            sys.stderr.write('memtrail: warning: unexpected mime-type %s for %s\n' % (self.mime_type, path))
 
         self.addr2line = None
 
