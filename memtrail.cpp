@@ -192,7 +192,9 @@ public:
    PipeBuf(int fd) :
       _fd(fd),
       _written(0)
-   {}
+   {
+      assert(fd >= 0);
+   }
 
    inline void
    write(const void *buf, size_t nbytes) {
@@ -374,6 +376,8 @@ _log(struct header_t *hdr) {
 
    assert(ptr);
    assert(ssize);
+
+   _open();
 
    PipeBuf buf(fd);
    buf.write(&ptr, sizeof ptr);
@@ -806,6 +810,8 @@ memtrail_snapshot(void) {
    pthread_mutex_lock(&mutex);
 
    _flush();
+
+   _open();
 
    static const void *ptr = NULL;
    static const ssize_t size = 0;
