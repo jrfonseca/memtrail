@@ -688,6 +688,27 @@ strdup(const char *s)
 }
 
 
+extern "C"
+PUBLIC char *
+strndup(const char *s, size_t n)
+{
+   size_t len = 0;
+   while (n && s[len]) {
+      ++len;
+      --n;
+   }
+
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   char *ptr = (char *)_malloc(len + 1, &uc);
+   if (ptr) {
+      memcpy(ptr, s, len);
+      ptr[len] = 0;
+   }
+   return ptr;
+}
+
+
 static int
 _vasprintf(char **strp, const char *fmt, va_list ap, unw_context_t *uc)
 {

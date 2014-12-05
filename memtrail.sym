@@ -10,6 +10,7 @@ memtrail_snapshot
 posix_memalign
 realloc
 strdup
+strndup
 valloc
 vasprintf
 _ZdaPv
