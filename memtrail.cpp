@@ -68,6 +68,14 @@
 #define MAX_SYMBOLS 131071
 
 
+/* Minimum alignment for this platform */
+#ifdef __x86_64__
+#define MIN_ALIGN 16
+#else
+#define MIN_ALIGN (sizeof(double))
+#endif
+
+
 extern "C" void *__libc_malloc(size_t size);
 extern "C" void __libc_free(void *ptr);
 
@@ -498,6 +506,11 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
       return NULL;
    }
 
+   if (size == 0) {
+      // Honour malloc(0), but allocate one byte for accounting purposes.
+      ++size;
+   }
+
    ptr = __libc_malloc(alignment + sizeof *hdr + size);
    if (!ptr) {
       return NULL;
@@ -516,29 +529,10 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
 }
 
 
-static void *
+static inline void *
 _malloc(size_t size, unw_context_t *uc)
 {
-   struct header_t *hdr;
-   void *res;
-
-   if (size == 0) {
-      // Honour malloc(0), but allocate one byte for accounting purposes.
-      ++size;
-   }
-
-   hdr = (struct header_t *)__libc_malloc(sizeof *hdr + size);
-   if (!hdr) {
-      return NULL;
-   }
-
-   init(hdr, size, hdr, uc);
-   res = &hdr[1];
-   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
-
-   _update(hdr);
-
-   return res;
+   return _memalign(MIN_ALIGN, size, uc);
 }
 
 static void
