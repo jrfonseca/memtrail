@@ -50,13 +50,8 @@
 #include "list.h"
 
 
-#if __GNUC__ >= 4
-   #define PUBLIC __attribute__ ((visibility("default")))
-   #define PRIVATE __attribute__ ((visibility("hidden")))
-#else
-   #define PUBLIC
-   #define PRIVATE
-#endif
+#define PUBLIC __attribute__ ((visibility("default")))
+#define PRIVATE __attribute__ ((visibility("hidden")))
 
 #define ARRAY_SIZE(x) (sizeof (x) / sizeof ((x)[0]))
 
