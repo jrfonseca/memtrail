@@ -32,6 +32,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #include <malloc.h>
 #include <errno.h>
@@ -46,6 +47,7 @@
 #include <libunwind.h>
 
 #include <new>
+#include <algorithm>
 
 #include "list.h"
 
@@ -158,6 +160,9 @@ total_size = 0;
 
 static ssize_t
 max_size = 0;
+
+static ssize_t
+limit_size = SSIZE_MAX;
 
 struct list_head
 hdr_list = { &hdr_list, &hdr_list };
@@ -464,6 +469,14 @@ _update(struct header_t *hdr,
       } else {
          hdr->pending = true;
          list_add(&hdr->list_head, &hdr_list);
+      }
+
+      if (size > 0 &&
+          (total_size + size < total_size || // overflow
+           total_size + size > limit_size)) {
+         fprintf(stderr, "memtrail: warning: out of memory\n");
+         _flush();
+         _exit(1);
       }
 
       total_size += size;
@@ -857,6 +870,13 @@ on_start(void)
    // Only trace the current process.
    unsetenv("LD_PRELOAD");
    _open();
+
+   // Abort when the application allocates half of the physical memory, to
+   // prevent the system from slowing down to a halt due to swapping
+   long pagesize = sysconf(_SC_PAGESIZE);
+   long phys_pages = sysconf(_SC_PHYS_PAGES);
+   limit_size = (ssize_t) std::min((intmax_t) phys_pages / 2, SSIZE_MAX / pagesize) * pagesize;
+   fprintf(stderr, "memtrail: limiting to %zi bytes\n", limit_size);
 }
 
 
