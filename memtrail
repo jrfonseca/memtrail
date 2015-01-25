@@ -157,7 +157,7 @@ class Module:
             # use relative offset for shared objects
             _addr = offset
         else:
-            return
+            return NO_FUNCTION, NO_FUNCTION + ':0'
 
         if self.addr2line is None:
             cmd = [
