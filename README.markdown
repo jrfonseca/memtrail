@@ -146,6 +146,8 @@ Memory profiling:
 
 * [Valgrind's Massif](http://valgrind.org/docs/manual/ms-manual.html)
 
+* [Heaptrack](http://milianw.de/blog/heaptrack-a-heap-memory-profiler-for-linux)
+
 * [Google Performance Tools](http://google-perftools.googlecode.com/svn/trunk/doc/heapprofile.html)
 
 * [MemProf](http://www.secretlabs.de/projects/memprof/)
