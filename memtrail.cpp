@@ -316,7 +316,7 @@ _gzopen(const char *name, int oflag, mode_t mode)
    pid = fork();
    switch (pid) {
    case -1:
-      fprintf(stderr, "memtrail: warning could not fork\n");
+      fprintf(stderr, "memtrail: warning: could not fork\n");
       close(parentToChild[READ_FD]);
       close(parentToChild[WRITE_FD]);
       return open(name, oflag, mode);
@@ -359,7 +359,7 @@ _open(void) {
       fd = _gzopen("memtrail.data", O_WRONLY | O_CREAT | O_TRUNC, mode);
 
       if (fd < 0) {
-         fprintf(stderr, "could not open memtrail.data\n");
+         fprintf(stderr, "memtrail: error: could not open memtrail.data\n");
          abort();
       }
 
