@@ -104,7 +104,13 @@ def record(args):
         env = os.environ.copy()
         env['LD_PRELOAD'] = ld_preload
 
-    retcode = subprocess.call(cmd, env=env)
+    p = subprocess.Popen(cmd, env=env)
+    try:
+        retcode = p.wait()
+    except KeyboardInterrupt:
+        p.send_signal(signal.SIGINT)
+        retcode = p.wait()
+
     if retcode < 0:
         try:
             signal_name = signal_names[-retcode]
