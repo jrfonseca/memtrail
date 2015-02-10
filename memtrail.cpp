@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <linux/limits.h> // PIPE_BUF
+#include <link.h> // _r_debug, link_map
 
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
@@ -131,6 +132,113 @@ libunwind_backtrace(unw_context_t *uc, void **buffer, int size)
    }
 
    return count;
+}
+
+
+extern "C" const char *__progname_full;
+
+
+static char progname[PATH_MAX] = {0};
+
+
+/**
+ * Just like dladdr() but without holding lock.
+ *
+ * Calling dladdr() will dead-lock when another thread is doing dlopen() and
+ * the newly loaded shared-object's global constructors call malloc.
+ *
+ * See also glibc/elf/rtld-debugger-interface.txt
+ */
+static int
+_dladdr (const void *address, Dl_info *info) {
+   struct link_map * lm = _r_debug.r_map;
+   ElfW(Addr) addr = (ElfW(Addr)) address;
+
+   /* XXX: we're effectively replacing odds of deadlocking with the odds of a
+    * race condition when a new shared library is opened.  We should keep a
+    * cache of this info to improve our odds.
+    *
+    * Another alternative would be to use /self/proc/maps
+    */
+   if (_r_debug.r_state != r_debug::RT_CONSISTENT) {
+      fprintf(stderr, "memtrail: warning: inconsistent r_debug state\n");
+   }
+
+   if (0) fprintf(stderr, "0x%lx:\n", addr);
+
+   while (lm->l_prev) {
+      lm = lm->l_prev;
+   }
+
+   while (lm) {
+
+      ElfW(Addr) l_addr;
+      const char *l_name;
+      if (lm->l_addr) {
+         // Shared-object
+         l_addr = lm->l_addr;
+         l_name = lm->l_name;
+      } else {
+         // Main program
+#if defined(__i386__)
+         l_addr = 0x08048000;
+#elif defined(__x86_64__)
+         l_addr = 0x400000;
+#else
+#error
+#endif
+
+         // Determine the absolute path to progname
+         if (progname[0] == 0) {
+            size_t len = readlink("/proc/self/exe", progname, sizeof progname - 1);
+            if (len <= 0) {
+               strncpy(progname, __progname_full, PATH_MAX);
+               len = PATH_MAX - 1;
+            }
+            progname[len] = 0;
+         }
+
+         l_name = progname;
+      }
+
+      if (0) fprintf(stderr, "  0x%p, 0x%lx, %s\n", lm, l_addr, l_name);
+      const ElfW(Ehdr) *l_ehdr = (const ElfW(Ehdr) *)l_addr;
+      const ElfW(Phdr) *l_phdr = (const ElfW(Phdr) *)(l_addr + l_ehdr->e_phoff);
+      for (int i = 0; i < l_ehdr->e_phnum; ++i) {
+         if (l_phdr[i].p_type == PT_LOAD) {
+            ElfW(Addr) start = lm->l_addr + l_phdr[i].p_vaddr;
+            ElfW(Addr) stop = start + l_phdr[i].p_memsz;
+
+            if (0) fprintf(stderr, "    0x%lx-0x%lx \n", start, stop);
+            if (start <= addr && addr < stop) {
+               info->dli_fname = l_name;
+               info->dli_fbase = (void *)l_addr;
+               info->dli_sname = NULL;
+               info->dli_saddr = NULL;
+               return 1;
+            }
+         }
+      }
+
+      lm = lm->l_next;
+   }
+
+   if (0) {
+      int fd = open("/proc/self/maps", O_RDONLY);
+      do {
+         char buf[512];
+         size_t nread = read(fd, buf, sizeof buf);
+         if (!nread) {
+            break;
+         }
+         ssize_t nwritten;
+         nwritten = write(STDERR_FILENO, buf, nread);
+         (void)nwritten;
+      } while (true);
+      close(fd);
+   }
+
+   return 0;
 }
 
 
@@ -250,7 +358,7 @@ _lookup(PipeBuf &buf, void *addr) {
 
    if (sym->addr != addr) {
       Dl_info info;
-      if (dladdr(addr, &info)) {
+      if (_dladdr(addr, &info)) {
          Module *module = NULL;
          for (unsigned i = 0; i < numModules; ++i) {
             if (strcmp(modules[i].dli_fname, info.dli_fname) == 0) {
