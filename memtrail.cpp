@@ -135,9 +135,6 @@ libunwind_backtrace(unw_context_t *uc, void **buffer, int size)
 }
 
 
-extern "C" const char *__progname_full;
-
-
 static char progname[PATH_MAX] = {0};
 
 
@@ -192,7 +189,7 @@ _dladdr (const void *address, Dl_info *info) {
          if (progname[0] == 0) {
             size_t len = readlink("/proc/self/exe", progname, sizeof progname - 1);
             if (len <= 0) {
-               strncpy(progname, __progname_full, PATH_MAX);
+               strncpy(progname, program_invocation_name, PATH_MAX);
                len = PATH_MAX - 1;
             }
             progname[len] = 0;
