@@ -34,6 +34,12 @@ Requirements
 
 * [libunwind](http://www.nongnu.org/libunwind/)
 
+  For best results (performance/stability) configure libunwind and build as
+
+        ./configure --disable-cxx-exceptions --disable-debug-frame --disable-block-signals --disable-shared --enable-static --with-pic
+
+  add set `UNWIND_SRC` environment variable to where the libunwind source is.
+
 * [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot) for graph output
 
 

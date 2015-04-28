@@ -1,10 +1,18 @@
+ifeq ($(UNWIND_SRC),)
+UNWIND_INCLUDES =
+UNWIND_LIBS = -lunwind
+else
+UNWIND_INCLUDES = -I$(UNWIND_SRC)/include
+UNWIND_LIBS = $(UNWIND_SRC)/src/.libs/libunwind.a -llzma
+endif
+
 CXX ?= g++
-CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden
+CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden $(UNWIND_INCLUDES)
 
 all: libmemtrail.so sample benchmark
 
 libmemtrail.so: memtrail.cpp memtrail.version
-	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< -lunwind -ldl
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< $(UNWIND_LIBS) -ldl
 
 %: %.cpp
 	$(CXX) -O0 -g2 -o $@ $< -ldl
