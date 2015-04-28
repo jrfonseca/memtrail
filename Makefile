@@ -4,8 +4,8 @@ NM ?= nm
 
 all: .libmemtrail.so.check sample benchmark
 
-libmemtrail.so: memtrail.cpp memtrail.sym
-	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -o $@ $< -lunwind -ldl
+libmemtrail.so: memtrail.cpp memtrail.version
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< -lunwind -ldl
 
 .libmemtrail.so.check: libmemtrail.so memtrail.sym
 	$(NM) --dynamic --defined-only libmemtrail.so | sed -n 's/^[0-9a-fA-F]\+ T //p' | diff -du memtrail.sym -
