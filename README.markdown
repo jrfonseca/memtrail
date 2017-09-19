@@ -40,7 +40,7 @@ Requirements
 
   add set `UNWIND_SRC` environment variable to where the libunwind source is.
 
-* [gprof2dot](http://code.google.com/p/jrfonseca/wiki/Gprof2Dot) for graph output
+* [gprof2dot](https://github.com/jrfonseca/gprof2dot) for graph output
 
 
 Build
@@ -120,6 +120,9 @@ consumption:
 ![Sample](sample.png)
 
 
+It is also possible to trigger memtrail to take snapshots at specific points by
+calling `memtrail_snapshot` from your code:
+
     #include "memtrail.h"
     
     ...
@@ -133,6 +136,8 @@ Links
 Memory debugging:
 
 * [Valgrind's Memcheck](http://valgrind.org/docs/manual/mc-manual.html)
+
+* [Google Sanitizers](https://github.com/google/sanitizers)
 
 * [duma](http://duma.sourceforge.net/)
 
@@ -154,13 +159,6 @@ Memory profiling:
 
 * [Heaptrack](http://milianw.de/blog/heaptrack-a-heap-memory-profiler-for-linux)
 
-* [Google Performance Tools](http://google-perftools.googlecode.com/svn/trunk/doc/heapprofile.html)
+* [Google Performance Tools' HEAPPROFILE](https://github.com/gperftools/gperftools)
 
 * [MemProf](http://www.secretlabs.de/projects/memprof/)
-
-Catalogs:
-
-* [Mozilla's](http://www.mozilla.org/performance/tools.html)
-
-* [Owen Taylor's](http://people.redhat.com/otaylor/memprof/memtools.html)
-
