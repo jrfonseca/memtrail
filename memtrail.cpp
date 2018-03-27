@@ -869,7 +869,7 @@ asprintf(char **strp, const char *format, ...)
  */
 
 PUBLIC void *
-operator new(size_t size) throw (std::bad_alloc) {
+operator new(size_t size) noexcept(false) {
    unw_context_t uc;
    unw_getcontext(&uc);
    return _malloc(size, &uc);
@@ -877,7 +877,7 @@ operator new(size_t size) throw (std::bad_alloc) {
 
 
 PUBLIC void *
-operator new[] (size_t size) throw (std::bad_alloc) {
+operator new[] (size_t size) noexcept(false) {
    unw_context_t uc;
    unw_getcontext(&uc);
    return _malloc(size, &uc);
@@ -885,19 +885,19 @@ operator new[] (size_t size) throw (std::bad_alloc) {
 
 
 PUBLIC void
-operator delete (void *ptr) throw () {
+operator delete (void *ptr) noexcept {
    _free(ptr);
 }
 
 
 PUBLIC void
-operator delete[] (void *ptr) throw () {
+operator delete[] (void *ptr) noexcept {
    _free(ptr);
 }
 
 
 PUBLIC void *
-operator new(size_t size, const std::nothrow_t&) throw () {
+operator new(size_t size, const std::nothrow_t&) noexcept {
    unw_context_t uc;
    unw_getcontext(&uc);
    return _malloc(size, &uc);
@@ -905,7 +905,7 @@ operator new(size_t size, const std::nothrow_t&) throw () {
 
 
 PUBLIC void *
-operator new[] (size_t size, const std::nothrow_t&) throw () {
+operator new[] (size_t size, const std::nothrow_t&) noexcept {
    unw_context_t uc;
    unw_getcontext(&uc);
    return _malloc(size, &uc);
@@ -913,13 +913,13 @@ operator new[] (size_t size, const std::nothrow_t&) throw () {
 
 
 PUBLIC void
-operator delete (void *ptr, const std::nothrow_t&) throw () {
+operator delete (void *ptr, const std::nothrow_t&) noexcept {
    _free(ptr);
 }
 
 
 PUBLIC void
-operator delete[] (void *ptr, const std::nothrow_t&) throw () {
+operator delete[] (void *ptr, const std::nothrow_t&) noexcept {
    _free(ptr);
 }
 
