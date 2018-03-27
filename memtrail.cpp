@@ -163,6 +163,7 @@ _dladdr (const void *address, Dl_info *info) {
 
    if (0) fprintf(stderr, "0x%lx:\n", addr);
 
+   assert(lm->l_prev == 0);
    while (lm->l_prev) {
       lm = lm->l_prev;
    }
@@ -184,7 +185,11 @@ _dladdr (const void *address, Dl_info *info) {
 #else
 #error
 #endif
+         l_name = lm->l_name;
+      }
 
+      assert(l_name != nullptr);
+      if (l_name[0] == 0 && lm == _r_debug.r_map) {
          // Determine the absolute path to progname
          if (progname[0] == 0) {
             size_t len = readlink("/proc/self/exe", progname, sizeof progname - 1);
@@ -194,7 +199,6 @@ _dladdr (const void *address, Dl_info *info) {
             }
             progname[len] = 0;
          }
-
          l_name = progname;
       }
 
