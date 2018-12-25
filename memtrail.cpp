@@ -182,6 +182,8 @@ _dladdr (const void *address, Dl_info *info) {
          l_addr = 0x08048000;
 #elif defined(__x86_64__)
          l_addr = 0x400000;
+#elif defined(__aarch64__)
+         l_addr = 0x400000;
 #else
 #error
 #endif
