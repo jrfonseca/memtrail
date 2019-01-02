@@ -4,6 +4,7 @@
 *.json
 *.o
 *.out
+*.pstats
 *.pyc
 *.so
 gprof2dot.py

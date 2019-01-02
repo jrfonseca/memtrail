@@ -1,0 +1,23 @@
+# http://editorconfig.org
+
+root = true
+
+[*.{c,h,cpp,hpp}]
+indent_style = space
+indent_size = 3
+
+[*.{markdown,md}]
+indent_style = space
+trim_trailing_whitespace = false
+
+[{*.py,memtrail}]
+indent_style = space
+indent_size = 4
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+indent_size = 8
