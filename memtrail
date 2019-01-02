@@ -173,6 +173,7 @@ class Module:
             return NO_FUNCTION, NO_FUNCTION + ':0'
 
         self.addr2line.stdin.write('0x%x\n' % _addr)
+        self.addr2line.stdin.flush()
         function = self.addr2line.stdout.readline().strip()
         line = self.addr2line.stdout.readline().strip()
 
