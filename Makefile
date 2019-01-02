@@ -28,7 +28,7 @@ test: libmemtrail.so sample gprof2dot.py
 	./memtrail record ./sample
 	./memtrail dump
 	./memtrail report --show-snapshots --show-snapshot-deltas --show-cumulative-snapshot-delta --show-maximum --show-leaks --output-graphs
-	$(foreach LABEL, snapshot-0 snapshot-1 snapshot-1-delta maximum leaked, ./gprof2dot.py -f json memtrail.$(LABEL).json > memtrail.$$LABEL.dot ;)
+	$(foreach LABEL, snapshot-0 snapshot-1 snapshot-1-delta maximum leaked, ./gprof2dot.py -f json memtrail.$(LABEL).json > memtrail.$(LABEL).dot ;)
 
 test-debug: libmemtrail.so sample
 	$(RM) memtrail.data $(wildcard memtrail.*.json) $(wildcard memtrail.*.dot)
