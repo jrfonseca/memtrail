@@ -130,6 +130,7 @@ def record(args):
 
 
 NO_FUNCTION = '??'
+NO_LINE = '??:?'
 
 
 def _ignore_sigint():
@@ -159,7 +160,7 @@ class Module:
             # use relative offset for shared objects
             _addr = offset
         else:
-            return NO_FUNCTION, NO_FUNCTION + ':0'
+            return NO_FUNCTION, NO_LINE
 
         if self.addr2line is None:
             cmd = [
@@ -172,7 +173,7 @@ class Module:
         p = self.addr2line
 
         if p.returncode is not None:
-            return NO_FUNCTION, NO_FUNCTION + ':0'
+            return NO_FUNCTION, NO_LINE
 
         self.addr2line.stdin.write(b'0x%x\n' % _addr)
         self.addr2line.stdin.flush()
@@ -204,7 +205,7 @@ class Symbol(object):
         
         self.offset = offset
         self._function = None
-        self._line = '??:0'
+        self._line = NO_LINE
 
     def _resolve(self):
         if self._function is None:
@@ -232,20 +233,24 @@ class Symbol(object):
 
     def __str__(self):
         self._resolve()
-        if self._function != NO_FUNCTION:
-            moduleName = os.path.basename(self.modulePath)
-            if moduleName != 'libmemtrail.so':
-                filename, lineNo = self._line.split(':', 1)
-                if filename != NO_FUNCTION:
-                    if filename.startswith(self._cwd):
-                        filename = filename[len(self._cwd):]
-                    return '%s [%s:%s]' % (self._function, filename, lineNo)
-            return self._function
-        elif self.modulePath is not None:
-            return '%s+0x%x' % (self.modulePath, self.offset)
-        else:
+        if self.modulePath is None:
             return '0x%x' % self.addr
 
+        if self._function != NO_FUNCTION:
+            s = self._function
+            moduleName = os.path.basename(self.modulePath)
+            if moduleName == 'libmemtrail.so':
+                return s
+        else:
+            s = '%s+0x%x' % (self.modulePath, self.offset)
+
+        if self._line != NO_LINE:
+            filename, lineNo = self._line.split(':', 1)
+            if filename.startswith(self._cwd):
+                filename = filename[len(self._cwd):]
+            s += ' [%s:%s]' % (filename, lineNo)
+
+        return s
 
 class SymbolTable:
 
