@@ -9,7 +9,7 @@ endif
 CXX ?= g++
 CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden -std=gnu++11 $(UNWIND_INCLUDES)
 
-PYTHON ?= python
+PYTHON ?= python3
 
 all: libmemtrail.so sample benchmark
 

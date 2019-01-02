@@ -28,9 +28,11 @@ Requirements
 
 * Linux
 
-* Python 2.7
+* Python 3
 
 * gzip
+
+* binutils' addr2line
 
 * [libunwind](http://www.nongnu.org/libunwind/)
 

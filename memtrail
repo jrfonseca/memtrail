@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##########################################################################
 #
-# Copyright 2011-2014 Jose Fonseca
+# Copyright 2011-2019 Jose Fonseca
 # All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,6 +34,8 @@ import struct
 import subprocess
 import sys
 import time
+
+from operator import attrgetter
 
 
 
@@ -143,17 +145,17 @@ class Module:
         self._path = os.path.abspath(path)
 
         self.mime_type = subprocess.check_output(['file', '--dereference', '--brief', '--mime-type', self._path]).strip()
-        if self.mime_type not in ('application/x-executable', 'application/x-sharedlib'):
+        if self.mime_type not in (b'application/x-executable', b'application/x-sharedlib'):
             sys.stderr.write('memtrail: warning: unexpected mime-type %s for %s\n' % (self.mime_type, path))
 
         self.addr2line = None
 
     def lookup(self, addr, offset):
 
-        if self.mime_type == 'application/x-executable':
+        if self.mime_type == b'application/x-executable':
             # use absolute addresses for executables
             _addr = addr
-        elif self.mime_type == 'application/x-sharedlib':
+        elif self.mime_type == b'application/x-sharedlib':
             # use relative offset for shared objects
             _addr = offset
         else:
@@ -172,10 +174,10 @@ class Module:
         if p.returncode is not None:
             return NO_FUNCTION, NO_FUNCTION + ':0'
 
-        self.addr2line.stdin.write('0x%x\n' % _addr)
+        self.addr2line.stdin.write(b'0x%x\n' % _addr)
         self.addr2line.stdin.flush()
-        function = self.addr2line.stdout.readline().strip()
-        line = self.addr2line.stdout.readline().strip()
+        function = self.addr2line.stdout.readline().decode().strip()
+        line = self.addr2line.stdout.readline().decode().strip()
 
         return function, line
 
@@ -301,7 +303,7 @@ class TreeNode:
     def _write(self, stream, indent, threshold, total_cost):
         children = self.children.values()
         children = [child for child in children if child.cost]
-        children.sort(lambda x, y: cmp(x.cost, y.cost), reverse = True)
+        children.sort(key = attrgetter("cost"), reverse = True)
         
         it = iter(children)
         for child in it:
@@ -355,16 +357,16 @@ class Heap:
         return other
 
     def add_heap(self, other):
-        for frames, size in other.framesSizes.iteritems():
+        for frames, size in other.framesSizes.items():
             self._update(size, frames)
 
     def sub_heap(self, other):
-        for frames, size in other.framesSizes.iteritems():
+        for frames, size in other.framesSizes.items():
             self._update(-size, frames)
 
     def tree(self, symbolTable):
         root = TreeNode()
-        for frames, size in self.framesSizes.iteritems():
+        for frames, size in self.framesSizes.items():
             if size == 0:
                 continue
             root.cost += size
@@ -394,7 +396,7 @@ class Heap:
 
         callchains = {}
 
-        for frames, size in self.framesSizes.iteritems():
+        for frames, size in self.framesSizes.items():
             if size == 0:
                 continue
 
@@ -427,7 +429,7 @@ class Heap:
                 callchains[callchain] = size
 
         events = []
-        for callchain, size in callchains.iteritems():
+        for callchain, size in callchains.items():
             if size == 0:
                 continue
             if size < 0:
@@ -552,7 +554,7 @@ class Parser:
     def __init__(self, log):
         self.log = open(log, 'rb')
         magic = self.log.read(2)
-        if magic == '\037\213':
+        if magic == b'\037\213':
             # gzip file
             self.log.seek(-4, os.SEEK_END)
             self.log_size, = struct.unpack('I', self.log.read(4))
@@ -610,7 +612,7 @@ class Parser:
                 modulePath = self.modulePaths[moduleNo]
             except KeyError:
                 length, = self.read_pointer()
-                modulePath = self.read(length)
+                modulePath = self.read(length).decode()
                 self.modulePaths[moduleNo] = modulePath
 
             self.symbolTable.addSymbol(addr, modulePath, offset)
@@ -887,8 +889,7 @@ def dump(args):
 
 
 def synopsis():
-    command_names = commands.keys()
-    command_names.sort()
+    command_names = sorted(commands.keys())
     for command_name in command_names:
         yield command_name, commands[command_name].__doc__
 
