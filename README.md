@@ -10,6 +10,8 @@ leaks and identify memory hogs, for long-running and CPU intensive workloads,
 which simply run too slow under Valgrind's dynamic binary instrumentation,
 hence this project.
 
+[![Build Status](https://travis-ci.org/jrfonseca/memtrail.svg?branch=master)](https://travis-ci.org/jrfonseca/memtrail)
+
 Features
 --------
 
