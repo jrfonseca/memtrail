@@ -583,9 +583,6 @@ class Parser:
         except KeyboardInterrupt:
             sys.stdout.write('\n')
 
-    # ./libmemtrail.so(+0xead)[0x2b54cc593ead]
-    frame_re = re.compile(r'^(?P<module>[^()]*)(?:\((?P<symbol>.*)\+(?P<offset>0x[0-9a-fA-F]+)\))?\[(?P<address>0x[0-9a-fA-F]+)\]$')
-
     def parse_event(self):
         self.stamp += 1
         stamp = self.stamp
