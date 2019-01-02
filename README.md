@@ -4,11 +4,11 @@ About
 **memtrail** is a `LD_PRELOAD` based memory profiler and leak detector for Linux.
 
 There are already many other open-source memory debugging/profiling tools for
-Linux, several of which are listed on Links section below, and the most
-powerful arguably being Valgrind.  However, I needed a tool that could quantify
-leaks and identify memory hogs, for long-running and CPU intensive workloads,
-which simply run too slow under Valgrind's dynamic binary instrumentation,
-hence this project.
+Linux, several of which are listed on the [Links section below](#links), and
+the most powerful arguably being Valgrind.  However, I needed a tool that could
+quantify leaks and identify memory hogs, for long-running and CPU intensive
+workloads, which simply run too slow under Valgrind's dynamic binary
+instrumentation, hence this project.
 
 [![Build Status](https://travis-ci.org/jrfonseca/memtrail.svg?branch=master)](https://travis-ci.org/jrfonseca/memtrail)
 
