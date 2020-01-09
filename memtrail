@@ -176,6 +176,7 @@ class Module:
             return NO_FUNCTION, NO_LINE
 
         self.addr2line.stdin.write(b'0x%x\n' % _addr)
+        sys.stderr.write('%s 0x%x\n' % (self.path, _addr))
         self.addr2line.stdin.flush()
         function = self.addr2line.stdout.readline().decode().strip()
         line = self.addr2line.stdout.readline().decode().strip()

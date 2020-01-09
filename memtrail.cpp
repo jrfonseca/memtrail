@@ -545,7 +545,10 @@ init(struct header_t *hdr,
    hdr->size = size;
    hdr->allocated = true;
    hdr->pending = false;
-   hdr->internal = false;
+
+   // Presume allocations created by libstdc++ before we initialized are
+   // internal.  This is necessary to ignore its emergency_pool global.
+   hdr->internal = fd == -1;
 
    if (RECORD) {
       hdr->addr_count = libunwind_backtrace(uc, hdr->addrs, ARRAY_SIZE(hdr->addrs));
@@ -582,19 +585,21 @@ _update(struct header_t *hdr,
          list_add(&hdr->list_head, &hdr_list);
       }
 
-      if (size > 0 &&
-          (total_size + size < total_size || // overflow
-           total_size + size > limit_size)) {
-         fprintf(stderr, "memtrail: warning: out of memory\n");
-         _flush();
-         _exit(1);
-      }
+      if (!hdr->internal) {
+         if (size > 0 &&
+             (total_size + size < total_size || // overflow
+              total_size + size > limit_size)) {
+            fprintf(stderr, "memtrail: warning: out of memory\n");
+            _flush();
+            _exit(1);
+         }
 
-      total_size += size;
-      assert(total_size >= 0);
+         total_size += size;
+         assert(total_size >= 0);
 
-      if (total_size >= max_size) {
-         max_size = total_size;
+         if (total_size >= max_size) {
+            max_size = total_size;
+         }
       }
    } else {
       fprintf(stderr, "memtrail: warning: recursion\n");
@@ -640,7 +645,7 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
    init(hdr, size, ptr, uc);
    res = &hdr[1];
    assert(((size_t)res & (alignment - 1)) == 0);
-   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
+   if (1) fprintf(stderr, "alloc %p %zu\n", res, size);
 
    _update(hdr);
 
@@ -969,10 +974,12 @@ memtrail_snapshot(void) {
 }
 
 
+extern "C" void _IO_doallocbuf(FILE *ptr);
+
+
 /*
  * Constructor/destructor
  */
-
 
 __attribute__ ((constructor(101)))
 static void
@@ -980,6 +987,13 @@ on_start(void)
 {
    // Only trace the current process.
    unsetenv("LD_PRELOAD");
+
+   _IO_doallocbuf(stdin);
+   _IO_doallocbuf(stdout);
+   _IO_doallocbuf(stderr);
+
+   dlsym(RTLD_NEXT, "printf");
+
    _open();
 
    // Abort when the application allocates half of the physical memory, to

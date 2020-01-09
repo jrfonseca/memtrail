@@ -40,7 +40,7 @@ size_t leaked = 0;
 static void
 test_dlsym(void)
 {
-   dlsym(RTLD_NEXT, "foo");
+   dlsym(RTLD_NEXT, "printf");
 }
 
 
