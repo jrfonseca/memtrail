@@ -645,7 +645,7 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
    init(hdr, size, ptr, uc);
    res = &hdr[1];
    assert(((size_t)res & (alignment - 1)) == 0);
-   if (1) fprintf(stderr, "alloc %p %zu\n", res, size);
+   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
 
    _update(hdr);
 
