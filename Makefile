@@ -17,7 +17,7 @@ libmemtrail.so: memtrail.cpp memtrail.version
 	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< $(UNWIND_LIBS) -ldl
 
 %: %.cpp
-	$(CXX) -O0 -g2 -o $@ $< -ldl
+	$(CXX) -O0 -g2 -Wno-unused-result -o $@ $< -ldl
 
 gprof2dot.py:
 	wget --quiet --timestamping https://raw.githubusercontent.com/jrfonseca/gprof2dot/master/gprof2dot.py
