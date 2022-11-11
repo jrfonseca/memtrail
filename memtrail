@@ -248,6 +248,7 @@ class Symbol(object):
 
         if self._line != NO_LINE:
             filename, lineNo = self._line.split(':', 1)
+            filename = os.path.normpath(filename)
             if filename.startswith(self._cwd):
                 filename = filename[len(self._cwd):]
             s += ' [%s:%s]' % (filename, lineNo)
