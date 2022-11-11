@@ -146,7 +146,7 @@ class Module:
         self._path = os.path.abspath(path)
 
         self.mime_type = subprocess.check_output(['file', '--dereference', '--brief', '--mime-type', self._path]).strip()
-        if self.mime_type not in (b'application/x-executable', b'application/x-sharedlib'):
+        if self.mime_type not in (b'application/x-executable', b'application/x-pie-executable', b'application/x-sharedlib'):
             sys.stderr.write('memtrail: warning: unexpected mime-type %s for %s\n' % (self.mime_type, path))
 
         self.addr2line = None
@@ -156,7 +156,7 @@ class Module:
         if self.mime_type == b'application/x-executable':
             # use absolute addresses for executables
             _addr = addr
-        elif self.mime_type == b'application/x-sharedlib':
+        elif self.mime_type in (b'application/x-sharedlib', b'application/x-pie-executable'):
             # use relative offset for shared objects
             _addr = offset
         else:
@@ -176,7 +176,8 @@ class Module:
             return NO_FUNCTION, NO_LINE
 
         self.addr2line.stdin.write(b'0x%x\n' % _addr)
-        sys.stderr.write('%s 0x%x\n' % (self.path, _addr))
+        if False:
+            sys.stderr.write('%s 0x%x\n' % (self.path, _addr))
         self.addr2line.stdin.flush()
         function = self.addr2line.stdout.readline().decode().strip()
         line = self.addr2line.stdout.readline().decode().strip()
