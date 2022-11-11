@@ -529,6 +529,7 @@ _flush(void) {
       list_del(&it->list_head);
       if (!it->allocated) {
          __libc_free(it->ptr);
+         it = nullptr;
       } else {
          it->pending = false;
       }
@@ -575,17 +576,19 @@ _update(struct header_t *hdr,
       hdr->allocated = allocating;
       ssize_t size = allocating ? (ssize_t)hdr->size : -(ssize_t)hdr->size;
 
+      bool internal = hdr->internal;
       if (hdr->pending) {
          assert(!allocating);
          hdr->pending = false;
          list_del(&hdr->list_head);
          __libc_free(hdr->ptr);
+         hdr = nullptr;
       } else {
          hdr->pending = true;
          list_add(&hdr->list_head, &hdr_list);
       }
 
-      if (!hdr->internal) {
+      if (!internal) {
          if (size > 0 &&
              (total_size + size < total_size || // overflow
               total_size + size > limit_size)) {
@@ -609,6 +612,7 @@ _update(struct header_t *hdr,
       if (!hdr->pending) {
          if (!allocating) {
             __libc_free(hdr->ptr);
+            hdr = nullptr;
          }
       }
    }
@@ -670,9 +674,9 @@ _free(void *ptr)
 
    hdr = (struct header_t *)ptr - 1;
 
-   _update(hdr, false);
-
    if (0) fprintf(stderr, "free %p %zu\n", ptr, hdr->size);
+
+   _update(hdr, false);
 }
 
 
