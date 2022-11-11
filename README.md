@@ -130,6 +130,8 @@ Memory debugging:
 
 * [Valgrind's Memcheck](http://valgrind.org/docs/manual/mc-manual.html)
 
+* [bcc memleak](https://github.com/iovisor/bcc)
+
 * [Google Sanitizers](https://github.com/google/sanitizers)
 
 * [duma](http://duma.sourceforge.net/)
@@ -149,6 +151,8 @@ Memory debugging:
 Memory profiling:
 
 * [Valgrind's Massif](http://valgrind.org/docs/manual/ms-manual.html)
+
+* [Memory Frame Graphs](https://www.brendangregg.com/FlameGraphs/memoryflamegraphs.html)
 
 * [Heaptrack](https://github.com/KDE/heaptrack)
 
