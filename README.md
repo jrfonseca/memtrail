@@ -65,55 +65,44 @@ directory.
 
 View results with
 
-    memtrail report
-
+    memtrail report --report-maximum
 
 It will produce something like
 
 
-    maximum: 5890 bytes
-    
-    ->34.77% (2048B): test_calloc
-    | ->34.77% (2048B): main
-    |   ->34.77% (2048B): __libc_start_main
-    |     ->34.77% (2048B): _start
-    | 
-    ->17.39% (1024B): test_memalign
-    | ->17.39% (1024B): main
-    |   ->17.39% (1024B): __libc_start_main
-    |     ->17.39% (1024B): _start
-    | 
-    ->17.39% (1024B): test_malloc
-    | ->17.39% (1024B): main
-    |   ->17.39% (1024B): __libc_start_main
-    |     ->17.39% (1024B): _start
-    | 
-    -> 8.69% (512B): TestGlobal::TestGlobal()
-    | -> 8.69% (512B): __static_initialization_and_destruction_0
-    |   -> 8.69% (512B): _GLOBAL__sub_I_leaked
-    |     -> 8.69% (512B): __libc_csu_init
-    |       -> 8.69% (512B): __libc_start_main
-    |         -> 8.69% (512B): _start
-    | 
-    -> 8.69% (512B): test_cxx
-    | -> 8.69% (512B): main
-    |   -> 8.69% (512B): __libc_start_main
-    |     -> 8.69% (512B): _start
-    | 
-    -> 8.69% (512B): test_cxx
-    | -> 8.69% (512B): main
-    |   -> 8.69% (512B): __libc_start_main
-    |     -> 8.69% (512B): _start
-    | 
-    -> 4.35% (256B): TestGlobal::TestGlobal()
-    | -> 4.35% (256B): __static_initialization_and_destruction_0
-    |   -> 4.35% (256B): _GLOBAL__sub_I_leaked
-    |     -> 4.35% (256B): __libc_csu_init
-    |       -> 4.35% (256B): __libc_start_main
-    |         -> 4.35% (256B): _start
-    | 
-    -> 0.02% (1B) in 2 places, all below the 1.00% threshold
-    
+    maximum: 8,960B
+      -> 45.71% (4,096B, 2x): calloc
+      | -> 45.71% (4,096B, 2x): test_calloc() [sample.cpp:82]
+      |   -> 45.71% (4,096B, 2x): main [sample.cpp:242]
+      |     -> 45.71% (4,096B, 2x): __libc_start_call_main [sysdeps/nptl/libc_start_call_main.h:58]
+      |       -> 45.71% (4,096B, 2x): call_init [csu/libc-start.c:128]
+      |         -> 45.71% (4,096B, 2x): _start
+      | 
+      -> 31.43% (2,816B, 4x): malloc
+      | -> 11.43% (1,024B, 1x): test_malloc() [sample.cpp:57]
+      | | -> 11.43% (1,024B, 1x): main [sample.cpp:241]
+      | |   -> 11.43% (1,024B, 1x): __libc_start_call_main [sysdeps/nptl/libc_start_call_main.h:58]
+      | |     -> 11.43% (1,024B, 1x): call_init [csu/libc-start.c:128]
+      | |       -> 11.43% (1,024B, 1x): _start
+      | | 
+      | -> 11.43% (1,024B, 1x): test_realloc() [sample.cpp:103]
+      | | -> 11.43% (1,024B, 1x): main [sample.cpp:243]
+      | |   -> 11.43% (1,024B, 1x): __libc_start_call_main [sysdeps/nptl/libc_start_call_main.h:58]
+      | |     -> 11.43% (1,024B, 1x): call_init [csu/libc-start.c:128]
+      | |       -> 11.43% (1,024B, 1x): _start
+      | | 
+      | -> 8.57% (768B, 2x): TestGlobal::TestGlobal() [sample.cpp:212]
+      |   -> 8.57% (768B, 2x): __static_initialization_and_destruction_0(int, int) [sample.cpp:225]
+      |     -> 8.57% (768B, 2x): _GLOBAL__sub_I_leaked [sample.cpp:252]
+      |       -> 8.57% (768B, 2x): call_init [csu/libc-start.c:144]
+      |         -> 8.57% (768B, 2x): _start
+      | 
+      -> 22.86% (2,048B, 1x): realloc
+        -> 22.86% (2,048B, 1x): test_realloc() [sample.cpp:106]
+          -> 22.86% (2,048B, 1x): main [sample.cpp:243]
+            -> 22.86% (2,048B, 1x): __libc_start_call_main [sysdeps/nptl/libc_start_call_main.h:58]
+              -> 22.86% (2,048B, 1x): call_init [csu/libc-start.c:128]
+                -> 22.86% (2,048B, 1x): _start
     memtrail.maximum.json written
 
 You can then use `gprof2dot.py` to obtain graphs highlighting memory leaks or

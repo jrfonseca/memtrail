@@ -301,6 +301,7 @@ class TreeNode:
 
     def __init__(self, label=''):
         self.label = label
+        self.count = 0
         self.cost = 0
         self.children = {}
 
@@ -317,16 +318,16 @@ class TreeNode:
         for child in it:
             if abs(child.cost) < threshold * abs(total_cost):
                 nr_pruned = 1
+                pruned_count = child.count
                 pruned_cost = child.cost
                 for child in it:
                     absolute_cost = child.cost
-                    nr_pruned += 1
                 relative_cost = float(pruned_cost) / float(total_cost)
-                stream.write('%s-> %.2f%% (%s) in %u places, all below the %.2f%% threshold\n' % (indent, 100.0 * relative_cost, format_size(pruned_cost), nr_pruned, 100.0 * threshold))
+                stream.write('%s-> %.2f%% (%s, %ux) in %u places, all below the %.2f%% threshold\n' % (indent, 100.0 * relative_cost, format_size(pruned_cost), pruned_count, nr_pruned, 100.0 * threshold))
                 break
 
             relative_cost = float(child.cost) / float(total_cost)
-            stream.write('%s-> %.2f%% (%s): %s\n' % (indent, 100.0 * relative_cost, format_size(child.cost), child.label))
+            stream.write('%s-> %.2f%% (%s, %ux): %s\n' % (indent, 100.0 * relative_cost, format_size(child.cost), child.count, child.label))
             if child is children[-1]:
                child_indent = indent + '  '
             else:
@@ -337,46 +338,55 @@ class TreeNode:
             if child is not children[-1]:
                 stream.write('%s\n' % (child_indent,))
 
-
 class Heap:
 
     def __init__(self):
-        self.framesSizes = {}
+        self.framesStats = {}
+        self.count = 0
         self.size = 0
 
     def add(self, alloc):
-        self._update(alloc.size, alloc.frames)
+        self._update(1, alloc.size, alloc.frames)
 
     def pop(self, alloc):
-        self._update(-alloc.size, alloc.frames)
+        self._update(-1, -alloc.size, alloc.frames)
 
-    def _update(self, ssize, frames):
+    def _update(self, count, ssize, frames):
         assert frames
-        try:
-            self.framesSizes[frames] += ssize
-        except KeyError:
-            self.framesSizes[frames] = ssize
+
+        framesCount, framesSize = self.framesStats.get(frames, (0, 0))
+        framesCount += count
+        framesSize += ssize
+        self.framesStats[frames] = framesCount, framesSize
+        
+        self.count += count
         self.size += ssize
 
     def copy(self):
         other = Heap()
-        other.framesSizes.update(self.framesSizes)
+        other.framesStats.update(self.framesStats)
+        other.count += self.count
         other.size += self.size
         return other
 
     def add_heap(self, other):
-        for frames, size in other.framesSizes.items():
-            self._update(size, frames)
+        for frames, stats in other.framesStats.items():
+            count, size = stats
+            self._update(count, size, frames)
 
     def sub_heap(self, other):
-        for frames, size in other.framesSizes.items():
-            self._update(-size, frames)
+        for frames, stats in other.framesStats.items():
+            count, size = stats
+            self._update(-count, -size, frames)
 
     def tree(self, symbolTable):
         root = TreeNode()
-        for frames, size in self.framesSizes.items():
+        for frames, stats in self.framesStats.items():
+            count, size = stats
             if size == 0:
+                assert count == 0
                 continue
+            root.count += count
             root.cost += size
             parent = root
             for address in frames:
@@ -387,6 +397,7 @@ class Heap:
                 except KeyError:
                     child = TreeNode(str(symbol))
                     parent.children[function_id] = child
+                child.count += count
                 child.cost += size
                 parent = child
         return root
@@ -404,7 +415,8 @@ class Heap:
 
         callchains = {}
 
-        for frames, size in self.framesSizes.items():
+        for frames, stats in self.framesStats.items():
+            count, size = stats
             if size == 0:
                 continue
 
