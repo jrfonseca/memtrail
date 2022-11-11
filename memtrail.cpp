@@ -522,7 +522,7 @@ _flush(void) {
         &it->list_head != &hdr_list;
 	     it = tmp, tmp = (struct header_t *)tmp->list_head.next) {
       assert(it->pending);
-      if (0) fprintf(stderr, "flush %p %zu\n", &it[1], it->size);
+      if (VERBOSITY >= 2) fprintf(stderr, "flush %p %zu\n", &it[1], it->size);
       if (!it->internal) {
          _log(it);
       }
@@ -649,7 +649,7 @@ _memalign(size_t alignment, size_t size, unw_context_t *uc)
    init(hdr, size, ptr, uc);
    res = &hdr[1];
    assert(((size_t)res & (alignment - 1)) == 0);
-   if (0) fprintf(stderr, "alloc %p %zu\n", res, size);
+   if (VERBOSITY >= 1) fprintf(stderr, "alloc %p %zu\n", res, size);
 
    _update(hdr);
 
@@ -674,7 +674,7 @@ _free(void *ptr)
 
    hdr = (struct header_t *)ptr - 1;
 
-   if (0) fprintf(stderr, "free %p %zu\n", ptr, hdr->size);
+   if (VERBOSITY >= 1) fprintf(stderr, "free %p %zu\n", ptr, hdr->size);
 
    _update(hdr, false);
 }
