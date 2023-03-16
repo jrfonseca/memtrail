@@ -65,7 +65,7 @@ directory.
 
 View results with
 
-    memtrail report --report-maximum
+    memtrail report --show-maximum
 
 It will produce something like
 
