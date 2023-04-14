@@ -49,7 +49,7 @@ profile: benchmark gprof2dot.py
 	./gprof2dot.py -f pstats memtrail.pstats > memtrail.dot
 
 clean:
-	$(RM) libmemtrail.so gprof2dot.py sample
+	$(RM) libmemtrail.so gprof2dot.py sample benchmark
 
 
 .PHONY: all test test-debug bench profile clean
