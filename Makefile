@@ -1,11 +1,3 @@
-ifeq ($(UNWIND_SRC),)
-UNWIND_INCLUDES =
-UNWIND_LIBS = -lunwind
-else
-UNWIND_INCLUDES = -I$(UNWIND_SRC)/include
-UNWIND_LIBS = $(UNWIND_SRC)/src/.libs/libunwind.a -llzma
-endif
-
 VERBOSITY ?= 0
 
 CXX ?= g++
@@ -16,7 +8,33 @@ PYTHON ?= python3
 all: libmemtrail.so sample benchmark
 
 libmemtrail.so: memtrail.cpp memtrail.version
-	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< $(UNWIND_LIBS) -ldl
+
+ifeq ($(shell test -d libunwind && echo true),true)
+
+$(info info: using local libunwind)
+
+libunwind/configure: libunwind/configure.ac
+	autoreconf -i libunwind
+
+libunwind/Makefile: libunwind/configure
+	cd libunwind && ./configure --disable-cxx-exceptions --disable-debug-frame --disable-block-signals --disable-shared --enable-static --with-pic --prefix=$(abspath local)
+
+local/lib/pkgconfig/libunwind.pc: libunwind/Makefile
+	$(MAKE) -C libunwind install
+
+libmemtrail.so: local/lib/pkgconfig/libunwind.pc
+
+export PKG_CONFIG_PATH := $(abspath local)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+
+else
+
+$(info info: using system's libunwind)
+
+endif
+
+libmemtrail.so:
+	pkg-config --cflags --libs --static libunwind
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< $$(pkg-config --cflags --libs --static libunwind) -ldl
 
 %: %.cpp
 	$(CXX) -O0 -g2 -Wno-unused-result -o $@ $< -ldl
