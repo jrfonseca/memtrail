@@ -11,4 +11,4 @@ jobs:
         fetch-depth: 1
     - run: sudo apt-get update -qq
     - run: sudo apt-get install -qq -y --no-install-recommends libunwind-dev
-    - run: make test
+    - run: make -j $(nproc) test
