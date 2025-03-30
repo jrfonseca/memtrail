@@ -196,7 +196,7 @@ _dladdr (const void *address, Dl_info *info) {
          if (progname[0] == 0) {
             size_t len = readlink("/proc/self/exe", progname, sizeof progname - 1);
             if (len <= 0) {
-               strncpy(progname, program_invocation_name, PATH_MAX);
+               strncpy(progname, program_invocation_name, PATH_MAX - 1);
                len = PATH_MAX - 1;
             }
             progname[len] = 0;
