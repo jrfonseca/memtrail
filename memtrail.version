@@ -13,6 +13,7 @@
       posix_memalign;
       pvalloc;
       realloc;
+      reallocarray;
       strdup;
       strndup;
       valloc;

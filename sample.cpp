@@ -118,6 +118,37 @@ test_realloc(void)
 }
 
 
+size_t large = PTRDIFF_MAX;
+
+
+static void
+test_reallocarray(void)
+{
+   size_t s = 128;
+   void *p;
+
+   // allocate some
+   p = reallocarray(NULL, 1024, s);
+
+   // grow some
+   p = reallocarray(p, 2048, s);
+
+   // free some
+   p = reallocarray(p, 0, s);
+   assert(!p);
+
+   // allocate 0 bytes
+   p = reallocarray(NULL, 0, s);
+   assert(p);
+   p = reallocarray(p, 0, s);
+   assert(!p);
+
+   // integer overflow
+   p = reallocarray(p, large, large);
+   assert(!p);
+}
+
+
 static void
 test_memalign(void)
 {
@@ -303,6 +334,7 @@ main(int argc, char *argv[])
    test_malloc();
    test_calloc();
    test_realloc();
+   test_reallocarray();
    test_memalign();
    test_aligned_alloc();
    test_valloc();

@@ -815,6 +815,48 @@ realloc(void *ptr, size_t size)
 
 
 extern "C"
+PUBLIC void *
+reallocarray(void *ptr, size_t nmemb, size_t size)
+{
+   struct header_t *hdr;
+   void *new_ptr;
+
+   unw_context_t uc;
+   unw_getcontext(&uc);
+
+   if (nmemb && size) {
+      size_t _size = nmemb * size;
+      if (_size < size) {
+         return NULL;
+      }
+      size = _size;
+   } else {
+      size = 0;
+   }
+
+   if (!ptr) {
+      return _malloc(size, &uc);
+   }
+
+   if (!size) {
+      _free(ptr);
+      return NULL;
+   }
+
+   hdr = (struct header_t *)ptr - 1;
+
+   new_ptr = _malloc(size, &uc);
+   if (new_ptr) {
+      size_t min_size = hdr->size >= size ? size : hdr->size;
+      memcpy(new_ptr, ptr, min_size);
+      _free(ptr);
+   }
+
+   return new_ptr;
+}
+
+
+extern "C"
 PUBLIC char *
 strdup(const char *s)
 {
