@@ -10,7 +10,7 @@ quantify leaks and identify memory hogs, for long-running and CPU intensive
 workloads, which simply run too slow under Valgrind's dynamic binary
 instrumentation, hence this project.
 
-![Build](https://github.com/jrfonseca/memtrail/workflows/build/badge.svg?branch=main)
+[![build](https://github.com/jrfonseca/memtrail/actions/workflows/build.yml/badge.svg)](https://github.com/jrfonseca/memtrail/actions/workflows/build.yml)
 
 Features
 --------
