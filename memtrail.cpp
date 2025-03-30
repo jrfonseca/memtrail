@@ -890,6 +890,10 @@ asprintf(char **strp, const char *format, ...)
 
 /*
  * C++
+ *
+ * See also the output of
+ *
+ *   nm -D --defined-only /lib/x86_64-linux-gnu/libstdc++.so.6 | grep '\<_Z[dn]' | c++filt
  */
 
 PUBLIC void *
