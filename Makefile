@@ -32,9 +32,9 @@ $(info info: using system's libunwind)
 
 endif
 
-libmemtrail.so:
+libmemtrail.so: Makefile
 	pkg-config --cflags --libs --static libunwind
-	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ $< $$(pkg-config --cflags --libs --static libunwind) -ldl
+	$(CXX) -O2 -g2 $(CXXFLAGS) -shared -fPIC -Wl,--version-script,memtrail.version -o $@ memtrail.cpp $$(pkg-config --cflags --libs --static libunwind) -ldl
 
 %: %.cpp
 	$(CXX) -O0 -g2 -Wno-unused-result -o $@ $< -ldl
