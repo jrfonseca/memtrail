@@ -1,7 +1,7 @@
 VERBOSITY ?= 0
 
 CXX ?= g++
-CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden -std=gnu++11 $(UNWIND_INCLUDES) -DVERBOSITY=$(VERBOSITY)
+CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden -std=gnu++17 $(UNWIND_INCLUDES) -DVERBOSITY=$(VERBOSITY)
 
 PYTHON ?= python3
 

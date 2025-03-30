@@ -948,6 +948,62 @@ operator delete[] (void *ptr, const std::nothrow_t&) noexcept {
 }
 
 
+PUBLIC void *
+operator new(size_t size, std::align_val_t al) noexcept(false) {
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(static_cast<size_t>(al), size, &uc);
+}
+
+
+PUBLIC void *
+operator new[] (size_t size, std::align_val_t al) noexcept(false) {
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(static_cast<size_t>(al), size, &uc);
+}
+
+
+PUBLIC void
+operator delete (void *ptr, std::align_val_t al) noexcept {
+   _free(ptr);
+}
+
+
+PUBLIC void
+operator delete[] (void *ptr, std::align_val_t al) noexcept {
+   _free(ptr);
+}
+
+
+PUBLIC void *
+operator new(size_t size, std::align_val_t al, const std::nothrow_t&) noexcept {
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(static_cast<size_t>(al), size, &uc);
+}
+
+
+PUBLIC void *
+operator new[] (size_t size, std::align_val_t al, const std::nothrow_t&) noexcept {
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(static_cast<size_t>(al), size, &uc);
+}
+
+
+PUBLIC void
+operator delete (void *ptr, std::align_val_t al, const std::nothrow_t&) noexcept {
+   _free(ptr);
+}
+
+
+PUBLIC void
+operator delete[] (void *ptr, std::align_val_t al, const std::nothrow_t&) noexcept {
+   _free(ptr);
+}
+
+
 /*
  * Snapshot.
  */

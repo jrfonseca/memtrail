@@ -188,6 +188,30 @@ test_cxx(void)
 }
 
 
+struct Aligned
+{
+   int dummy;
+}  __attribute__((aligned(64)));
+
+
+static void
+test_cxx_17(void)
+{
+   // allocate some
+   auto p = new Aligned;
+   auto q = new Aligned[512];
+
+   // leak some
+   new Aligned;
+   new Aligned[512];
+   leaked += 1 + 512;
+
+   // free some
+   delete p;
+   delete [] q;
+}
+
+
 static void
 test_string(void)
 {
@@ -268,6 +292,7 @@ main(int argc, char *argv[])
    test_memalign();
    test_aligned_alloc();
    test_cxx();
+   test_cxx_17();
    test_string();
    test_subprocess();
    test_snapshot();
