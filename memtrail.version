@@ -11,6 +11,7 @@
       memalign;
       memtrail_snapshot;
       posix_memalign;
+      pvalloc;
       realloc;
       strdup;
       strndup;

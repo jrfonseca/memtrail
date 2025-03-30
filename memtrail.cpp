@@ -734,6 +734,16 @@ valloc(size_t size)
 
 extern "C"
 PUBLIC void *
+pvalloc(size_t size)
+{
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   size_t pagesize = sysconf(_SC_PAGESIZE);
+   return _memalign(pagesize, (size + pagesize - 1) & ~(pagesize - 1), &uc);
+}
+
+extern "C"
+PUBLIC void *
 malloc(size_t size)
 {
    unw_context_t uc;

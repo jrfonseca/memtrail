@@ -25,6 +25,7 @@
 
 
 #include <assert.h>
+#include <malloc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -168,6 +169,19 @@ test_aligned_alloc(void)
 
 
 static void
+test_valloc(void)
+{
+   void *p = valloc(1);
+   assert(((size_t)p & 4095) == 0);
+   free(p);
+
+   void *q = pvalloc(1);
+   assert(((size_t)q & 4095) == 0);
+   free(q);
+}
+
+
+static void
 test_cxx(void)
 {
    char *p;
@@ -291,6 +305,7 @@ main(int argc, char *argv[])
    test_realloc();
    test_memalign();
    test_aligned_alloc();
+   test_valloc();
    test_cxx();
    test_cxx_17();
    test_string();
