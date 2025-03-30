@@ -143,6 +143,31 @@ test_memalign(void)
 
 
 static void
+test_aligned_alloc(void)
+{
+   void *p;
+   void *q;
+
+   // allocate some
+   p = aligned_alloc(16, 1024);
+   assert(((size_t)p & 15) == 0);
+
+   // leak some
+   q = aligned_alloc(4096, 1024);
+   assert(((size_t)q & 4095) == 0);
+   leaked += 1024;
+
+   // free some
+   free(p);
+
+   // allocate 0 bytes
+   p = aligned_alloc(sizeof (void*), 0);
+   assert(p);
+   free(p);
+}
+
+
+static void
 test_cxx(void)
 {
    char *p;
@@ -241,6 +266,7 @@ main(int argc, char *argv[])
    test_calloc();
    test_realloc();
    test_memalign();
+   test_aligned_alloc();
    test_cxx();
    test_string();
    test_subprocess();

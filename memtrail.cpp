@@ -716,6 +716,15 @@ memalign(size_t alignment, size_t size)
 
 extern "C"
 PUBLIC void *
+aligned_alloc(size_t alignment, size_t size)
+{
+   unw_context_t uc;
+   unw_getcontext(&uc);
+   return _memalign(alignment, size, &uc);
+}
+
+extern "C"
+PUBLIC void *
 valloc(size_t size)
 {
    unw_context_t uc;
