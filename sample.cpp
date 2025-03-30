@@ -150,7 +150,7 @@ test_reallocarray(void)
 
 
 static void
-test_memalign(void)
+test_posix_memalign(void)
 {
    void *p;
    void *q;
@@ -169,6 +169,31 @@ test_memalign(void)
 
    // allocate 0 bytes
    posix_memalign(&p, sizeof (void*), 0);
+   assert(p);
+   free(p);
+}
+
+
+static void
+test_memalign(void)
+{
+   void *p;
+   void *q;
+
+   // allocate some
+   p = memalign(16, 1024);
+   assert(((size_t)p & 15) == 0);
+
+   // leak some
+   q = memalign(4096, 1024);
+   assert(((size_t)q & 4095) == 0);
+   leaked += 1024;
+
+   // free some
+   free(p);
+
+   // allocate 0 bytes
+   p = memalign(sizeof (void*), 0);
    assert(p);
    free(p);
 }
@@ -335,6 +360,7 @@ main(int argc, char *argv[])
    test_calloc();
    test_realloc();
    test_reallocarray();
+   test_posix_memalign();
    test_memalign();
    test_aligned_alloc();
    test_valloc();
