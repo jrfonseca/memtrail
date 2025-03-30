@@ -153,3 +153,7 @@ Memory profiling:
 * [Google Performance Tools' HEAPPROFILE](https://github.com/gperftools/gperftools)
 
 * [MemProf](http://www.secretlabs.de/projects/memprof/)
+
+Further links:
+
+* [cpp links](https://github.com/MattPD/cpplinks/blob/master/performance.tools.md#memory)
