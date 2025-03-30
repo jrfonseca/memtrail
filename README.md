@@ -36,13 +36,7 @@ Requirements
 
 * binutils' addr2line
 
-* [libunwind](http://www.nongnu.org/libunwind/)
-
-  For best results (performance/stability) configure libunwind and build as
-
-        ./configure --disable-cxx-exceptions --disable-debug-frame --disable-block-signals --disable-shared --enable-static --with-pic
-
-  add set `UNWIND_SRC` environment variable to where the libunwind source is.
+* [libunwind](http://www.nongnu.org/libunwind/) (bundled as a git submodule)
 
 * [gprof2dot](https://github.com/jrfonseca/gprof2dot) for graph output
 
