@@ -36,7 +36,7 @@ Requirements
 
 * binutils' addr2line
 
-* [libunwind](http://www.nongnu.org/libunwind/)
+* [libunwind](https://www.nongnu.org/libunwind/)
 
   For best results (performance/stability) configure libunwind and build as
 
@@ -128,29 +128,27 @@ Links
 
 Memory debugging:
 
-* [Valgrind's Memcheck](http://valgrind.org/docs/manual/mc-manual.html)
+* [Valgrind's Memcheck](https://valgrind.org/docs/manual/mc-manual.html)
 
 * [bcc memleak](https://github.com/iovisor/bcc)
 
 * [Google Sanitizers](https://github.com/google/sanitizers)
 
-* [duma](http://duma.sourceforge.net/)
+* [duma](https://github.com/johnsonjh/duma)
 
-* [LeakTracer](http://www.andreasen.org/LeakTracer/)
+* [LeakTracer](https://github.com/fredericgermain/LeakTracer)
 
-* [glibc mtrace](http://www.gnu.org/s/hello/manual/libc/Allocation-Debugging.html)
+* [glibc mtrace](https://www.gnu.org/s/hello/manual/libc/Allocation-Debugging.html)
 
-* [Hans-Boehm garbage collector](http://www.hpl.hp.com/personal/Hans_Boehm/gc/leak.html)
+* [Hans-Boehm garbage collector](https://www.hboehm.info/gc/leak.html)
 
-* [Leaky](http://mxr.mozilla.org/mozilla/source/tools/leaky/leaky.html)
+* [failmalloc](https://www.nongnu.org/failmalloc/)
 
-* [failmalloc](http://www.nongnu.org/failmalloc/)
-
-* [dmalloc](http://dmalloc.com/)
+* [dmalloc](https://dmalloc.com/)
 
 Memory profiling:
 
-* [Valgrind's Massif](http://valgrind.org/docs/manual/ms-manual.html)
+* [Valgrind's Massif](https://valgrind.org/docs/manual/ms-manual.html)
 
 * [Memory Frame Graphs](https://www.brendangregg.com/FlameGraphs/memoryflamegraphs.html)
 
@@ -158,4 +156,4 @@ Memory profiling:
 
 * [Google Performance Tools' HEAPPROFILE](https://github.com/gperftools/gperftools)
 
-* [MemProf](http://www.secretlabs.de/projects/memprof/)
+* [MemProf](https://www.secretlabs.de/projects/memprof/)
