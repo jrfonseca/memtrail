@@ -136,6 +136,8 @@ Memory debugging:
 
 * [duma](https://github.com/johnsonjh/duma)
 
+* [mimalloc secure modes](https://github.com/microsoft/mimalloc)
+
 * [LeakTracer](https://github.com/fredericgermain/LeakTracer)
 
 * [glibc mtrace](https://www.gnu.org/s/hello/manual/libc/Allocation-Debugging.html)
