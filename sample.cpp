@@ -31,12 +31,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdarg.h>
+
 #include <dlfcn.h>
 
 #include "memtrail.h"
 
 
-size_t leaked = 0;
+static size_t leaked = 0;
 
 
 static void
@@ -274,9 +276,9 @@ test_cxx_nothrow(void) noexcept
    new(std::nothrow) char[512];
    leaked += 1 + 512;
 
-   // free some
-   delete p;
-   delete [] q;
+   // free some with nothrow delete
+   operator delete(p, std::nothrow);
+   operator delete[](q, std::nothrow);
 }
 
 
@@ -305,6 +307,24 @@ test_cxx_17(void)
 
 
 static void
+test_cxx_17_nothrow(void) noexcept
+{
+   // allocate some
+   auto p = new(std::nothrow) Aligned;
+   auto q = new(std::nothrow) Aligned[512];
+
+   // leak some
+   new(std::nothrow) Aligned;
+   new(std::nothrow) Aligned[512];
+   leaked += 1 + 512;
+
+   // free some with nothrow aligned delete
+   operator delete(p, std::align_val_t{alignof(Aligned)}, std::nothrow);
+   operator delete[](q, std::align_val_t{alignof(Aligned)}, std::nothrow);
+}
+
+
+static void
 test_string(void)
 {
    char *p;
@@ -318,6 +338,53 @@ test_string(void)
    assert(n == 5);
 
    free(p);
+}
+
+
+static void
+test_strndup(void)
+{
+   // copy a prefix shorter than the string
+   char *p = strndup("hello world", 5);
+   assert(strcmp(p, "hello") == 0);
+   free(p);
+
+   // n exceeds string length — copies whole string
+   char s[100] = "hi";
+   p = strndup(s, 100);
+   assert(strcmp(p, "hi") == 0);
+   free(p);
+
+   // leak some
+   strndup("leak", 4);
+   leaked += 5;   // len(4) + NUL(1)
+}
+
+
+static int
+do_vasprintf(char **strp, const char *fmt, ...)
+{
+   va_list ap;
+   va_start(ap, fmt);
+   int n = vasprintf(strp, fmt, ap);
+   va_end(ap);
+   return n;
+}
+
+static void
+test_vasprintf(void)
+{
+   char *p = NULL;
+   int n;
+
+   n = do_vasprintf(&p, "%s", "hello");
+   assert(n >= 0);
+   free(p);
+
+   // leak some
+   p = NULL;
+   do_vasprintf(&p, "%s", "x");
+   leaked += 1;
 }
 
 
@@ -389,7 +456,10 @@ main(int argc, char *argv[])
    test_cxx();
    test_cxx_nothrow();
    test_cxx_17();
+   test_cxx_17_nothrow();
    test_string();
+   test_strndup();
+   test_vasprintf();
    test_subprocess();
    test_snapshot();
 
