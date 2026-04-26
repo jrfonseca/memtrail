@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <malloc.h>
+#include <new>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -258,6 +259,27 @@ test_cxx(void)
 }
 
 
+static void
+test_cxx_nothrow(void) noexcept
+{
+   char *p;
+   char *q;
+
+   // allocate some
+   p = new(std::nothrow) char;
+   q = new(std::nothrow) char[512];
+
+   // leak some
+   new(std::nothrow) char;
+   new(std::nothrow) char[512];
+   leaked += 1 + 512;
+
+   // free some
+   delete p;
+   delete [] q;
+}
+
+
 struct Aligned
 {
    int dummy;
@@ -365,6 +387,7 @@ main(int argc, char *argv[])
    test_aligned_alloc();
    test_valloc();
    test_cxx();
+   test_cxx_nothrow();
    test_cxx_17();
    test_string();
    test_subprocess();
