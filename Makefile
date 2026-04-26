@@ -1,7 +1,11 @@
 VERBOSITY ?= 0
+COVERAGE ?= 0
 
 CXX ?= g++
 CXXFLAGS = -Wall -fno-omit-frame-pointer -fvisibility=hidden -std=gnu++17 $(UNWIND_INCLUDES) -DVERBOSITY=$(VERBOSITY)
+ifeq ($(COVERAGE),1)
+	CXXFLAGS += --coverage
+endif
 
 PYTHON ?= python3
 
@@ -47,7 +51,13 @@ sample: sample.cpp memtrail.h
 
 test: libmemtrail.so sample gprof2dot.py
 	$(RM) memtrail.data $(wildcard memtrail.*.json) $(wildcard memtrail.*.dot)
+ifeq ($(COVERAGE),1)
+	$(RM) *.gcda
+endif
 	$(PYTHON) memtrail record ./sample
+ifeq ($(COVERAGE),1)
+	$(PYTHON) -m gcovr --exclude-unreachable-branches --exclude-throw-branches --object-directory . --html-details coverage.html
+endif
 	$(PYTHON) memtrail dump
 	$(PYTHON) memtrail report --show-snapshots --show-snapshot-deltas --show-cumulative-snapshot-delta --show-maximum --show-leaks --output-graphs
 	$(foreach LABEL, snapshot-0 snapshot-1 snapshot-1-delta maximum leaked, ./gprof2dot.py -f json memtrail.$(LABEL).json > memtrail.$(LABEL).dot ;)

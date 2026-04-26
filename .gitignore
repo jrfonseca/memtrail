@@ -1,6 +1,10 @@
 .*.sw?
+*.css
 *.data
 *.dot
+*.gcda
+*.gcno
+*.html
 *.json
 *.o
 *.out
